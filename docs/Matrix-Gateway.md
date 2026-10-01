@@ -190,7 +190,7 @@ streams to the companion as an SSE `clap`/`tap` event — singles are yours to b
 to anything; doubles dismiss a live timer or alarm on-device and are logged to the
 card's event log. A single stray clap does nothing by design. Every registered gesture that isn't consumed by a dismissal flashes a small acknowledgment square in the panel's top-right corner (~220 ms, cyan = clap, amber = tap) — the board's way of saying *heard you*.
 
-## How it fits the rest of the wiki
+## How it fits the rest of the guide
 
 The Matrix Gateway is a **drop-in replacement** for the modules **and** the gateway.
 Wherever the rest of this guide says "the gateway," it applies here too — including
