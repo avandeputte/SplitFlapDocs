@@ -44,21 +44,36 @@ python3 tools/import_wiki.py ../SplitFlapGateway.wiki
 
 **This repository is the source of truth from now on.** Edit the Markdown here.
 
-## Hosting on Cloudflare Pages
+## Deploying
 
-One-time setup, no secrets needed:
+The site is the Cloudflare Pages project **`splitflap`** (direct upload, custom domain
+`splitflap.iothing.net`). Deploy a build with wrangler, using an API token that has
+*Cloudflare Pages: Edit* on the account:
 
-1. Cloudflare dashboard → **Workers & Pages → Create → Pages → Connect to Git** → pick this
-   repository, production branch `main`.
+```bash
+export CLOUDFLARE_API_TOKEN=...            # never commit this
+export CLOUDFLARE_ACCOUNT_ID=REDACTED-ACCOUNT-ID
+sh build.sh
+npx wrangler@latest pages deploy site --project-name splitflap --branch main
+```
+
+The deploy is live on the domain within a minute. (The token used so far cannot list
+accounts, hence the explicit account id; it is the id of the account that owns the
+`iothing.net` zone.)
+
+## Alternatively: let Cloudflare build it from Git
+
+If you would rather not run wrangler, connect the project to this repository instead and
+Cloudflare builds on every push (one-time setup, no secrets needed):
+
+1. Cloudflare dashboard → **Workers & Pages → `splitflap` → Settings → Builds** → connect to
+   Git → pick this repository, production branch `main`.
 2. Build settings:
    - **Build command:** `pip install -r requirements.txt && sh build.sh`
    - **Build output directory:** `site`
    - **Environment variable:** `PYTHON_VERSION` = `3.12`
-3. After the first deploy, **Custom domains → Set up a custom domain** → `splitflap.iothing.net`.
-   Cloudflare adds the CNAME itself when the zone is on Cloudflare; otherwise point a CNAME at
-   the `*.pages.dev` hostname it shows.
 
-From then on every push to `main` goes live in about a minute.
+The custom domain is already attached to the project, so nothing changes there.
 
 ## License
 
