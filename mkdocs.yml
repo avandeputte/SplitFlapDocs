@@ -5,7 +5,7 @@ site_description: Build a mechanical split-flap display and drive it with live c
 repo_url: https://github.com/avandeputte/SplitFlapGateway
 repo_name: GitHub
 edit_uri: ""
-copyright: Hardware © Adam G Makes · Documentation CC BY-NC-SA 4.0
+copyright: Software © Alex Van de Putte · Hardware © Adam G Makes · Documentation CC BY-NC-SA 4.0
 
 theme:
   name: material
