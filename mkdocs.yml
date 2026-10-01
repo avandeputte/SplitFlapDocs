@@ -1,0 +1,112 @@
+site_name: SplitFlap
+site_url: https://splitflap.iothing.net/docs/
+site_dir: site/docs
+site_description: Build a mechanical split-flap display and drive it with live content — the complete guide, from a bare board to a message on the wall.
+repo_url: https://github.com/avandeputte/SplitFlapGateway
+repo_name: GitHub
+edit_uri: ""
+copyright: Hardware © Adam G Makes · Documentation CC BY-NC-SA 4.0
+
+theme:
+  name: material
+  custom_dir: overrides
+  language: en
+  favicon: favicon.svg
+  # Dark only, in the landing page's palette (docs/stylesheets/extra.css). The brand in the
+  # header is overrides/partials/logo.html; it links back to the landing page (extra.homepage).
+  palette:
+    scheme: slate
+    primary: custom
+    accent: custom
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - navigation.indexes
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.tabs.link
+    - toc.follow
+
+extra:
+  homepage: https://splitflap.iothing.net/
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/avandeputte/SplitFlapGateway
+      name: SplitFlapGateway on GitHub
+
+extra_css:
+  - stylesheets/extra.css
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - github-callouts
+
+plugins:
+  - search
+
+not_in_nav: |
+  Gateway.md
+  Matrix-Portal-Gateway.md
+
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: warn
+
+# --- nav: generated from the wiki sidebar by tools/import_wiki.py ---
+nav:
+  - Home: index.md
+  - Start:
+      - Quick Start: Quick-Start.md
+      - Choosing a Configuration: Choosing-a-Configuration.md
+  - Build it:
+      - Hardware: Hardware.md
+      - Module Firmware: Module-Firmware.md
+      - Building a UPDI Flasher: UPDI-Flasher.md
+      - Flashing Modules: Flashing-Modules.md
+      - Provisioning: Provisioning.md
+      - Calibration: Calibration.md
+      - Module Diagnostics: Module-Diagnostics.md
+      - Flaps & Character Sets: Flaps-and-Character-Sets.md
+      - SplitFlap Gateway: SplitFlap-Gateway.md
+      - Gateway Case: Gateway-Case.md
+      - Matrix Gateway: Matrix-Gateway.md
+      - LCD Gateway: LCD-Gateway.md
+  - Drive it:
+      - Companion: Companion.md
+      - Built-in Apps: Built-in-Apps.md
+      - Standalone & Docker: Companion-Standalone.md
+      - Multiple Displays: Multiple-Displays.md
+      - Home Assistant: Home-Assistant.md
+      - Vestaboard API: Vestaboard-API.md
+      - MCP Server: MCP-Server.md
+      - Using splitflap-os: Using-splitflap-os.md
+  - Extend it:
+      - Writing Apps: Writing-Apps.md
+      - Writing Matrix Apps: Writing-Matrix-Apps.md
+      - Compatibility: Compatibility.md
+  - Reference:
+      - Bus Protocol: Bus-Protocol.md
+      - Gateway API: Gateway-API.md
+      - Canvas API: Canvas.md
+      - Canvas Ops Reference: Canvas-Ops-Reference.md
+      - Languages: Localization.md
+      - FAQ & Glossary: FAQ.md
+# --- end nav ---
