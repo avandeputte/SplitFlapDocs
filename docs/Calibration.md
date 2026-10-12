@@ -385,10 +385,6 @@ entry), `e` (erase the map) and `d` (dump what's stored) — every frame is spec
 
 ---
 
-**Canonical source:** this page is the guide port of the gateway repo's
-[CALIBRATION_GUIDE.md](https://github.com/avandeputte/SplitFlapGateway/blob/main/CALIBRATION_GUIDE.md)
-— when in doubt, the repo wins.
-
 **See also:** [Provisioning](Provisioning.md) — assigning IDs, the step before calibration ·
 [Module-Firmware](Module-Firmware.md) — flash → provision → calibrate in context ·
 [Bus Protocol](Bus-Protocol.md) — the raw commands underneath
