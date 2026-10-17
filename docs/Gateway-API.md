@@ -85,9 +85,13 @@ with no Windows-1252 representation are rejected.
 
 The SplitFlap Gateway also carries a whole **hardware-maintenance tier** under `/api/flap/*` —
 version/EEPROM queries, calibration, provisioning, self-diagnostics, per-module flap-set
-config, restore-by-serial. The Matrix Gateway omits all of it by design: its modules are
-drawn, so there is nothing to calibrate or provision. That tier is documented in the
-SplitFlapGateway README and `openapi.yaml` (see [the footer](#canonical-sources)).
+config, restore-by-serial, and the bus tests — `POST /api/flap/probe` with
+`GET /api/flap/probe/status` *(v3.14)*, and `POST /api/flap/soak` with `…/soak/status` and
+`…/soak/cancel` *(v3.15)*, both described in
+[Module Diagnostics](Module-Diagnostics.md#when-a-module-answers-short-questions-but-not-long-ones).
+The Matrix Gateway omits all of it by design: its modules are drawn, so there is nothing to
+calibrate or provision. That tier is documented in the SplitFlapGateway README and
+`openapi.yaml` (see [the footer](#canonical-sources)).
 
 ### Display
 
@@ -148,13 +152,26 @@ A client that needs certainty consults `/api/capabilities` first.
 | `POST` | `/api/config/import` | an exported settings file | *(v3.16)* Applies whichever known keys the body carries (same clamps as NVS load), saves, and reports `rebootNeeded` when a boot-read field (panel geometry, grid, hostname, fbPsram) changed | Matrix Gateway only |
 | `GET` | `/api/capabilities` | — | What the wall can show — [see below](#apicapabilities-one-contract-across-walls) | both, identical shape |
 | `GET` / `POST` | `/api/maintenance` | `{"on":true}` | `{ok,on}` | **SplitFlap Gateway only** — the Matrix Gateway removed maintenance mode (a drawn wall needs no calibration to protect) |
+| `GET` | `/api/bus` | — | *(v3.15)* Who holds the bus: `level` (0 free, 1 busy, 2 exclusive), `reason`, `remaining` seconds (−1 = no expiry) and the list of `holds` | SplitFlap Gateway only |
+| `POST` | `/api/bus/hold` | `{"reason":"backup","seconds":60}` | *(v3.15)* Take or renew a busy lease (5–300 s; the same reason renews in place). Reasons the firmware owns are refused | SplitFlap Gateway only |
+| `POST` | `/api/bus/release` | `{"reason":"backup"}` | *(v3.15)* Drop a lease taken with `/api/bus/hold` | SplitFlap Gateway only |
 | `GET` / `POST` | `/api/quiet` | `{"on":true}` | `{ok,on}` | both |
 | `GET` / `POST` | `/api/quiet/schedule` | `{"enabled":true,"start":"22:00","end":"07:00","days":127}` | `{enabled,start,end,days}` | both |
 | `POST` | `/api/mqtt/test` | `{"host","port","user","pass"}` — all optional, defaults to saved config | Broker reachability + credentials, without touching the live connection | SplitFlap Gateway only (the Matrix Gateway has no MQTT) |
 
-**Maintenance mode** (SplitFlap Gateway only — the Matrix Gateway dropped it) makes the gateway
-ignore externally-originated MQTT commands (the web UI keeps working) so calibration work isn't
-disturbed. **Quiet time** blanks the wall — every reel homes to its blank flap — and restores it
+**The bus hold** *(SplitFlap Gateway, v3.15)*. Every maintenance operation — provisioning,
+calibration, the self-tests, the probe and the soak, a backup sweep, a restore — takes a hold on
+the bus automatically for its own duration, and each hold is a lease that expires on its own.
+While a *busy* hold is in force the display endpoints (`/api/flap/char|index|text|home`,
+`/api/rs485/send|batch`, `/api/display/cells`, quiet ON) answer
+`503 {"error":"maintenance in progress -- display content is paused","reason":"…","remaining":N}`
+to any caller that does not send the header `X-SF-Client: dashboard`, and MQTT display commands
+are dropped; **retry after `remaining` seconds.** An *exclusive* hold (a restore) answers
+`503 {"error":"bus is reserved"}` to every bus route, dashboard or not. Read-only endpoints,
+settings and status are never gated; `/api/status` carries the current hold as `bus.lock`.
+**Maintenance mode** is the same hold without an expiry, flipped by hand; before v3.15 it gated
+MQTT only, so a companion driving the wall over REST could paint over a calibration in progress.
+**Quiet time** blanks the wall — every reel homes to its blank flap — and restores it
 when turned off; the schedule's `days` is a bitmask, bit 0 = Sunday. Both reset to off on reboot.
 
 ### Files, display & system (Matrix Gateway)
