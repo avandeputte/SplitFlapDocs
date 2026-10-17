@@ -52,14 +52,15 @@ The site is the Cloudflare Pages project **`splitflap`** (direct upload, custom 
 
 ```bash
 export CLOUDFLARE_API_TOKEN=...            # never commit this
-export CLOUDFLARE_ACCOUNT_ID=REDACTED-ACCOUNT-ID
+export CLOUDFLARE_ACCOUNT_ID=...           # see below
 sh build.sh
 npx wrangler@latest pages deploy site --project-name splitflap --branch main
 ```
 
-The deploy is live on the domain within a minute. (The token used so far cannot list
-accounts, hence the explicit account id; it is the id of the account that owns the
-`iothing.net` zone.)
+The deploy is live on the domain within a minute. The account id has to be given explicitly
+when the token is scoped too narrowly to list accounts, which a *Pages: Edit* token usually
+is. Find it in the Cloudflare dashboard, on the account's overview page or in the URL of any
+page inside the account.
 
 ## Alternatively: let Cloudflare build it from Git
 
