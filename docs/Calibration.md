@@ -39,16 +39,22 @@ Each mis-setting produces its own symptom, which is how you diagnose what to fix
 
 ---
 
-## Turn on Maintenance mode first
+## The wall is yours while the tab is open
 
-Calibration physically spins the reels. If an external system sends a display command
-over MQTT mid-calibration, it can move a reel while you're working on it. A yellow
-reminder with a **Turn On Maintenance** button sits at the top of the Calibration tab —
-click it before you begin; the reminder disappears once Maintenance is on.
+Calibration physically spins the reels, and a display command arriving mid-calibration —
+from MQTT, from the companion, from an automation — would move a reel while you are
+working on it. Since gateway v3.15 you do not have to guard against that yourself:
+**the Calibration tab holds the bus for as long as it is open.** While it does, display
+content from outside the dashboard is paused (MQTT display commands are dropped, REST
+display calls answer `503 … content is paused`), the banner says *Calibrating* and how
+long the hold has left, and the dashboard itself keeps working. The hold is a lease the
+tab keeps renewing; close the tab, or the browser, and it lapses within a minute. Nothing
+to switch on, nothing to remember to switch off.
 
-The web UI keeps working normally in Maintenance mode; only MQTT-sourced commands are
-ignored. **Turn Maintenance back off when you're done**, or the display will stop
-responding to MQTT commands.
+The manual **Maintenance** switch still exists for a long session — swapping flap sets on
+half the wall, say — that no single tab or operation covers. It is the one hold with no
+expiry, so turn it off when you are done. Gateways before v3.15 have only the switch, and
+it gates MQTT alone: turn it on before you begin.
 
 ---
 

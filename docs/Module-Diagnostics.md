@@ -169,7 +169,101 @@ Over REST, the gateway sequences the motor-driven tests as a job you poll:
 | `POST /api/flap/diag/mech` `{"id":38,"revs":10}` | Starts the mechanical test; `revs` 5–20 is honoured on v29+ |
 
 Both motor tests are refused with a **503** while a [restore on boot](SplitFlap-Gateway.md)
-is running, since that owns the bus.
+is running, since that owns the bus; while they run they hold the bus themselves, so
+display content from outside the dashboard is paused *(v3.15)*.
+
+---
+
+## When a module answers short questions but not long ones
+
+The three tests tell you about a module's hardware. A different kind of fault looks like
+a dead module and is not one: the module answers `v` (its version, 30-odd bytes) every
+time, answers the stats snapshot, and then fails its **calibration backup** — the `A`
+reply, the longest frame a module ever sends, several hundred bytes. Erasing the EEPROM
+"fixes" it, because an empty calibration makes the reply short again. That pattern is a
+**bus** problem — a long frame breaking up over a marginal line — or a module whose
+transmitter runs out of breath, not a module whose hardware is failing, and the
+self-tests will all pass. Two tools in the gateway are built for exactly this, and
+neither moves a flap.
+
+### The reply-size probe
+
+In the module's Diagnostics dialog, below the three tests *(gateway v3.14)*. It asks the
+module for four replies of increasing size — `v`, `Q`, the EEPROM dump `d` and the
+combined dump `A` — three times each, and shows which came back and how big they were.
+Read it as a staircase:
+
+| What you see | What it usually is |
+|---|---|
+| Every size answers, every time | The module and the line are fine; look elsewhere (a stale registry entry, a wrong ID). |
+| Short replies answer, `d` and `A` fail or come back short | The **line** loses long frames: termination, cable length, a marginal transceiver, or a baud rate the wiring cannot carry cleanly. Also check Bus Health for *discarded* frames. |
+| Only `A` fails, and only sometimes | Borderline. The gateway already falls back to `v`+`d` for a backup when `A` fails, so the backup still succeeds; fix the line when you can. |
+| Nothing answers at all | The module is silent — now the three tests, or the [Without the gateway](#without-the-gateway) commands, are the next step. |
+
+The probe runs on its own and holds the bus while it does; it will not start while a
+self-test, a calibration or the soak test owns the bus, and the button stays disabled
+until the motor tests on the dialog have finished. Over REST: `POST /api/flap/probe`
+`{"id":38,"rounds":3}`, then poll `GET /api/flap/probe/status` until `state` is `done`;
+each step carries `tries`, `ok` and the longest `bytes` seen.
+
+### The soak test
+
+The probe asks one module a dozen questions. The soak asks **the whole wall** for minutes on
+end, and in seven different ways, which is what catches the module that only drops out now and
+then. On the Status tab, under **Bus Health** *(gateway v3.15)*, pick **5, 10, 20 or 30
+minutes** and start it. Pass after pass it works the bus a different way:
+
+| Pass | What it sends | What that catches |
+|---|---|---|
+| **Roll call** | `m*v<lo>-<hi>` — every module answers in its own timed slot | a reply that is missing, that arrives damaged, or that arrives **twice** for one ID |
+| **Version, snapshot** | `v`, `Q` — the short replies, one module at a time | power and contact faults, which hit every size equally |
+| **Dump, combined dump** | `d`, `A` — the long replies | a line that loses long frames |
+| **Broadcast dump** | `m*A<lo>-<hi>` — the longest replies, back to back | slot timing under the heaviest load the bus ever sees |
+| **Write round trip** | the home offset and one map entry, each nudged one half-step, read back, **put back**, read back again | a write that does not land, or an EEPROM that no longer holds one |
+
+Nothing it sends moves a flap, so it is safe on a wall in service, with one caveat: it holds the
+bus for the whole run, so display content from outside the dashboard is paused until it
+finishes. You can cancel it at any time; a write round trip always runs to its restore step
+first. The two values it writes are read back and written back to what they were. If one cannot
+be confirmed restored, the report says so **first**, names the module, and prints the original
+value so you can write it back by hand or restore that module from your backup.
+
+**The report is a list of findings, not a scoreboard.** Each one names the modules, the evidence
+and what to do:
+
+| The finding | What it means | Where to start |
+|---|---|---|
+| **The bus loses long frames** — short replies fine, long ones lost, worst modules first | the line, not the modules | the 120 Ω termination at **both** ends, then total cable length and any stub, then the baud rate |
+| **Dropping out at every size** — the shortest reply fails as often as the longest | power or contact at those modules | re-seat them, check the pogo pins and the rail voltage in the snapshot; neighbours point at a shared backplane segment |
+| **Cannot send their dump** — every short reply arrives, not one dump ever does | the module's calibration map has grown too large for its firmware to assemble that reply | erase the map and restore from your backup, which writes the entries one at a time (see below) |
+| **Replies collide in broadcasts** — fine asked alone, missing or damaged in roll calls | two modules talking at once | Identify, then compare serial numbers and firmware versions |
+| **Two modules share an ID** — one ID answered twice in a broadcast | exactly that | Identify lists both serials; give one a new ID |
+| **Writes do not stick** | the value is not stored, or not read back as written | the snapshot's EEPROM verify: *FAILED* means a worn chip |
+| **Never answered** | not on the bus, or not on this ID | power, the pogo pins, a broken trace; Identify to see what is really out there |
+
+Over REST: `POST /api/flap/soak` `{"minutes":10}` (1–60), `GET /api/flap/soak/status` for the
+live tally (one row per module, `[ok, tries]` per kind of traffic plus the longest reply, the
+current and the worst miss streak), `POST /api/flap/soak/cancel` to stop early. The soak, the
+probe and the self-tests refuse to run over one another (`409`).
+
+### A full calibration map can silence a module's dump
+
+Worth knowing before you fine-tune all 64 flaps on a module. On module firmware **v32**, a
+module whose map is completely full can no longer send its EEPROM dump at all: it answers `v`
+and `Q` normally, and `d`/`A` never arrive, until the map is erased. Its backups fail from then
+on and its calibration cannot be read, while the display keeps working — which is the puzzle
+reported as *"the module stopped answering `mXA`; erasing the EEPROM fixed it."* The module
+assembles the whole reply before it sends anything, and a full map does not fit.
+
+Until the module firmware streams its dump:
+
+- **Back up before you fully calibrate**, not after.
+- **Fine-tune only the flaps that need it.** Total Steps and Home Offset get a reel most of the
+  way; a map with a handful of entries dumps without trouble.
+- **To recover a module that has stopped dumping**, erase its map (`m<id>e`, or Factory Reset in
+  its Info dialog) and restore it from your backup. The restore writes the entries one at a
+  time, which the module takes without complaint — it is only the *reply* that cannot be
+  assembled, not the storage.
 
 ---
 
@@ -182,6 +276,8 @@ is running, since that owns the bus.
   the fault into the map. Get a clean Hall test and a near-zero spread first.
 - **After any mechanical work** — a new flap set, a re-seated magnet, a replaced motor — run
   all three, then re-home and re-check the calibration.
+- **Soak a new wall once, and after any rewiring.** Ten minutes with a clean sheet is a
+  baseline you will be glad to have the day a module starts missing backups.
 - **Keep the firmware current.** v26 introduced the tests; v28 added the per-revolution
   counts and magnet width; v29 the rotation count; v30 automatic Hall-polarity detection.
   The gateway shows what a module reports and hides what it can't.

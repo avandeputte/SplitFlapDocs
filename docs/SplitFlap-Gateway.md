@@ -119,6 +119,20 @@ reads it from here, so you set the grid **once**, on the gateway.
   frames all of it wraps are specified in [Bus Protocol](Bus-Protocol.md).
 - **MQTT** — optional; publishes bus traffic and a periodic status blob, and subscribes to
   command topics. Default prefix `splitflap`, port 1883.
+- **Maintenance that happens by itself** *(v3.15)* — provisioning, calibration, the
+  self-tests, the probe and the soak, a backup sweep and a restore each take a **hold on
+  the bus** for their own duration. While a hold is in force, display content from
+  outside the dashboard is paused: MQTT display commands are dropped and the display
+  endpoints answer `503` with the reason and the seconds remaining, while the operator
+  keeps working. Every hold is a lease that expires on its own, so an abandoned job or a
+  closed tab can never leave the wall locked. The banner names what holds the bus. The
+  manual **Maintenance** switch is the same hold without an expiry, for a long session no
+  single operation covers. `GET /api/bus` shows who holds it; a client running its own
+  multi-step job can take a lease with `POST /api/bus/hold`.
+- **Bus Health** — a panel on the Status tab *(v3.14)* that counts the frames the bus
+  **discarded** (too long for the receive buffer, or never terminated — these used to
+  vanish silently), the frames that arrived corrupt, and the longest frame seen, and
+  from which you start the [whole-wall soak test](Module-Diagnostics.md#the-soak-test).
 - **Home Assistant discovery** — opt-in on the Settings tab (needs MQTT). Creates a gateway
   device with a Display text entity, Maintenance/Quiet switches, and a set of diagnostic
   sensors. *(This is the gateway's own HA device — the companion adds more; see
@@ -305,8 +319,10 @@ also the way to test a freshly uploaded file.
 
 **While it runs, nothing else touches the bus.** Every REST endpoint that would send a
 frame — display, home, calibrate, provisioning, dumps, diagnostics, raw sends and
-batches, quiet-time ON — answers `503 {"error":"restore in progress"}`, and MQTT
-commands are dropped (the maintenance switch still works). The dashboard shows a red
+batches, quiet-time ON — answers `503 {"error":"bus is reserved"}`, and MQTT
+commands are dropped (the maintenance switch still works). This is the *exclusive* form
+of the bus hold described above; the ordinary maintenance operations take the milder
+form that pauses content only. The dashboard shows a red
 border and a banner with the phase and progress, and the Settings card shows the
 detail. Read-only endpoints, settings, the bus monitor, the status page and OTA keep
 working, so you can watch the run, or **cancel** it. The gateway's own background
