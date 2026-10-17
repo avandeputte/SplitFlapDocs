@@ -224,9 +224,19 @@ minutes** and start it. Pass after pass it works the bus a different way:
 Nothing it sends moves a flap, so it is safe on a wall in service, with one caveat: it holds the
 bus for the whole run, so display content from outside the dashboard is paused until it
 finishes. You can cancel it at any time; a write round trip always runs to its restore step
-first. The two values it writes are read back and written back to what they were. If one cannot
-be confirmed restored, the report says so **first**, names the module, and prints the original
-value so you can write it back by hand or restore that module from your backup.
+first.
+
+**It takes its own safety net first.** Before the test writes anything, the gateway reads every
+module's calibration into a snapshot file on its flash — you will see *"Reading every module's
+calibration first, so the test can be undone"* while it does. If anything about the run goes
+wrong, one button under the report puts the **whole wall** back from that snapshot, through the
+same per-entry restore the boot restore uses: every module written by serial number, read back,
+compared, and the wall homed. You can also download the snapshot and keep it. It is a separate
+file from your own stored backup under Settings, which the soak never touches.
+
+The two values it writes are read back and written back to what they were. If one cannot be
+confirmed restored, the report says so **first**, names the module, prints the original value,
+and offers the rollback.
 
 **The report is a list of findings, not a scoreboard.** Each one names the modules, the evidence
 and what to do:
