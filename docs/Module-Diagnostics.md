@@ -224,9 +224,10 @@ minutes** and start it. Pass after pass it works the bus a different way:
 Nothing it sends moves a flap, so it is safe on a wall in service, with one caveat: it holds the
 bus for the whole run. While it runs, display content **and** homing are refused to every
 caller, the dashboard included — the test is measuring what the bus does, and an extra frame
-from anywhere would be counted against it. You can cancel it at any time: the bus is free again
-within a second *(gateway v3.15.1; in 3.15.0 a cancelled soak could leave the wall paused until
-its lease ran out)*, and a write round trip always runs to its restore step first.
+from anywhere would be counted against it. You can cancel it at any time, and the bus is
+free by the time the cancel returns *(gateway v3.15.1; in 3.15.0 a cancelled soak could leave
+the wall paused until its lease ran out, for as long as three minutes)*. The only thing a
+cancel waits for is a calibration value being written back, which always completes.
 
 **It takes its own safety net first.** Before the test writes anything, the gateway reads every
 module's calibration into a snapshot file on its flash — you will see *"Reading every module's
