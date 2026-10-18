@@ -46,10 +46,13 @@ from MQTT, from the companion, from an automation — would move a reel while yo
 working on it. Since gateway v3.15 you do not have to guard against that yourself:
 **the Calibration tab holds the bus for as long as it is open.** While it does, display
 content from outside the dashboard is paused (MQTT display commands are dropped, REST
-display calls answer `503 … content is paused`), the banner says *Calibrating* and how
-long the hold has left, and the dashboard itself keeps working. The hold is a lease the
-tab keeps renewing; close the tab, or the browser, and it lapses within a minute. Nothing
-to switch on, nothing to remember to switch off.
+display calls answer `503 … content is paused`), and the banner says so. **Everything you
+calibrate with keeps working** — homing, nudging, counting steps, saving — because those are
+maintenance, not content *(gateway v3.15.1; in 3.15.0 homing was refused, which is
+[issue #7](https://github.com/avandeputte/SplitFlapGateway/issues/7))*. The hold is a lease
+the tab keeps renewing while you are using it: close the tab, hide it, or leave it untouched
+for ten minutes and it lapses on its own. The banner also carries a **Release the bus** button
+if you want it gone at once. Nothing to switch on, nothing to remember to switch off.
 
 The manual **Maintenance** switch still exists for a long session — swapping flap sets on
 half the wall, say — that no single tab or operation covers. It is the one hold with no

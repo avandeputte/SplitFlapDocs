@@ -222,9 +222,11 @@ minutes** and start it. Pass after pass it works the bus a different way:
 | **Write round trip** | the home offset and one map entry, each nudged one half-step, read back, **put back**, read back again | a write that does not land, or an EEPROM that no longer holds one |
 
 Nothing it sends moves a flap, so it is safe on a wall in service, with one caveat: it holds the
-bus for the whole run, so display content from outside the dashboard is paused until it
-finishes. You can cancel it at any time; a write round trip always runs to its restore step
-first.
+bus for the whole run. While it runs, display content **and** homing are refused to every
+caller, the dashboard included — the test is measuring what the bus does, and an extra frame
+from anywhere would be counted against it. You can cancel it at any time: the bus is free again
+within a second *(gateway v3.15.1; in 3.15.0 a cancelled soak could leave the wall paused until
+its lease ran out)*, and a write round trip always runs to its restore step first.
 
 **It takes its own safety net first.** Before the test writes anything, the gateway reads every
 module's calibration into a snapshot file on its flash — you will see *"Reading every module's

@@ -155,7 +155,7 @@ A client that needs certainty consults `/api/capabilities` first.
 | `GET` / `POST` | `/api/maintenance` | `{"on":true}` | `{ok,on}` | **SplitFlap Gateway only** — the Matrix Gateway removed maintenance mode (a drawn wall needs no calibration to protect) |
 | `GET` | `/api/bus` | — | *(v3.15)* Who holds the bus: `level` (0 free, 1 busy, 2 exclusive), `reason`, `remaining` seconds (−1 = no expiry) and the list of `holds` | SplitFlap Gateway only |
 | `POST` | `/api/bus/hold` | `{"reason":"backup","seconds":60}` | *(v3.15)* Take or renew a busy lease (5–300 s; the same reason renews in place). Reasons the firmware owns are refused | SplitFlap Gateway only |
-| `POST` | `/api/bus/release` | `{"reason":"backup"}` | *(v3.15)* Drop a lease taken with `/api/bus/hold` | SplitFlap Gateway only |
+| `POST` | `/api/bus/release` | `{"reason":"backup"}`, or `{"reason":"soak","force":true}` | *(v3.15)* Drop a lease taken with `/api/bus/hold`. *(v3.15.1)* `force` releases a hold the firmware owns — the way out of a stuck banner; forcing the soak's hold cancels the soak, and a restore can only be cancelled | SplitFlap Gateway only |
 | `GET` / `POST` | `/api/quiet` | `{"on":true}` | `{ok,on}` | both |
 | `GET` / `POST` | `/api/quiet/schedule` | `{"enabled":true,"start":"22:00","end":"07:00","days":127}` | `{enabled,start,end,days}` | both |
 | `POST` | `/api/mqtt/test` | `{"host","port","user","pass"}` — all optional, defaults to saved config | Broker reachability + credentials, without touching the live connection | SplitFlap Gateway only (the Matrix Gateway has no MQTT) |
@@ -167,7 +167,11 @@ While a *busy* hold is in force the display endpoints (`/api/flap/char|index|tex
 `/api/rs485/send|batch`, `/api/display/cells`, quiet ON) answer
 `503 {"error":"maintenance in progress -- display content is paused","reason":"…","remaining":N}`
 to any caller that does not send the header `X-SF-Client: dashboard`, and MQTT display commands
-are dropped; **retry after `remaining` seconds.** An *exclusive* hold (a restore) answers
+are dropped; **retry after `remaining` seconds.** A caller also counts as the operator when it
+is the address that took the hold *(v3.15.1)*, so a proxy that strips unknown headers cannot
+lock a client out of its own hold. `/api/flap/home` is **not** gated as content: homing is
+maintenance and stays available *(v3.15.1)*, except while a probe, soak or self-test is
+measuring the bus, when content and homing are both refused to every caller. An *exclusive* hold (a restore) answers
 `503 {"error":"bus is reserved"}` to every bus route, dashboard or not. Read-only endpoints,
 settings and status are never gated; `/api/status` carries the current hold as `bus.lock`.
 **Maintenance mode** is the same hold without an expiry, flipped by hand; before v3.15 it gated

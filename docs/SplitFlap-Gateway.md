@@ -124,11 +124,19 @@ reads it from here, so you set the grid **once**, on the gateway.
   the bus** for their own duration. While a hold is in force, display content from
   outside the dashboard is paused: MQTT display commands are dropped and the display
   endpoints answer `503` with the reason and the seconds remaining, while the operator
-  keeps working. Every hold is a lease that expires on its own, so an abandoned job or a
-  closed tab can never leave the wall locked. The banner names what holds the bus. The
-  manual **Maintenance** switch is the same hold without an expiry, for a long session no
-  single operation covers. `GET /api/bus` shows who holds it; a client running its own
-  multi-step job can take a lease with `POST /api/bus/hold`.
+  keeps working. **Homing is never treated as content** — it paints nothing and it is what
+  calibration is built on, so it works throughout *(v3.15.1)*. The exception is a
+  machine-run test (the probe, the soak, a module self-test): those measure the bus, so
+  while one runs both content and homing are refused to everyone, dashboard included.
+
+  Every hold is a lease that expires on its own, and the gateway also checks once a second
+  that the job behind each hold is still running, so neither an abandoned tab nor a
+  cancelled test can leave the wall paused. The banner names what holds the bus and offers
+  **Release the bus** for anything but a restore. The manual **Maintenance** switch is the
+  same hold without an expiry, for a long session no single operation covers. `GET /api/bus`
+  shows who holds it; a client running its own multi-step job can take a lease with
+  `POST /api/bus/hold`, and the gateway then recognises that client as the operator by its
+  address as well as by the header the dashboard sends.
 - **Bus Health** — a panel on the Status tab *(v3.14)* that counts the frames the bus
   **discarded** (too long for the receive buffer, or never terminated — these used to
   vanish silently), the frames that arrived corrupt, and the longest frame seen, and
