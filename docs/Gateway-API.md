@@ -143,7 +143,7 @@ A client that needs certainty consults `/api/capabilities` first.
 
 | Method | Path | Body | Reply | Gateway |
 |---|---|---|---|---|
-| `GET` | `/api/status` | — | Uptime, IP, NTP, heap, and the quiet flag (SplitFlap Gateway also `maintenance` and `mqtt`). The Matrix Gateway adds a `panel` object — size, grid, font, and the **running bit `depth`** — and per-task stack watermarks (`stk`) | both |
+| `GET` | `/api/status` | — | Uptime, IP, NTP, heap, PSRAM and OTA-slot figures and why the board last rebooted *(v3.16: `psram`, `flash`, `reset`)*, and the quiet flag (SplitFlap Gateway also `maintenance` and `mqtt`). The Matrix Gateway adds a `panel` object — size, grid, font, and the **running bit `depth`** — and per-task stack watermarks (`stk`) | both |
 | `GET` | `/api/config` | — | Current configuration, passwords excluded; includes `product` + `version` | both |
 | `POST` | `/api/config/wifi` | `{"ssid":"…","pass":"…"}` | `{ok}` — reconnects | both |
 | `POST` | `/api/config/mqtt` | `{"host":"…","port":1883,"user":"…","pass":"…","prefix":"splitflap"}` | `{ok}` — reconnects | SplitFlap Gateway only (the Matrix Gateway has no MQTT) |
@@ -155,6 +155,7 @@ A client that needs certainty consults `/api/capabilities` first.
 | `GET` / `POST` | `/api/maintenance` | `{"on":true}` | `{ok,on}` | **SplitFlap Gateway only** — the Matrix Gateway removed maintenance mode (a drawn wall needs no calibration to protect) |
 | `GET` | `/api/bus` | — | *(v3.15)* Who holds the bus: `level` (0 free, 1 busy, 2 exclusive), `reason`, `remaining` seconds (−1 = no expiry) and the list of `holds` | SplitFlap Gateway only |
 | `POST` | `/api/bus/hold` | `{"reason":"backup","seconds":60}` | *(v3.15)* Take or renew a busy lease (5–300 s; the same reason renews in place). Reasons the firmware owns are refused | SplitFlap Gateway only |
+| `GET` / `DELETE` | `/api/bus/incidents` | `?max=50` | *(v3.16)* What the bus got wrong, newest first: the module it belongs to, the command in flight, the size and the time. Kinds are `D` discarded, `R` would not parse, `L` answered only on the second ask, `M` never answered, `X` two modules on one ID. `DELETE` clears it | SplitFlap Gateway only |
 | `POST` | `/api/bus/release` | `{"reason":"backup"}`, or `{"reason":"soak","force":true}` | *(v3.15)* Drop a lease taken with `/api/bus/hold`. *(v3.15.1)* `force` releases a hold the firmware owns — the way out of a stuck banner; forcing the soak's hold cancels the soak, and a restore can only be cancelled | SplitFlap Gateway only |
 | `GET` / `POST` | `/api/quiet` | `{"on":true}` | `{ok,on}` | both |
 | `GET` / `POST` | `/api/quiet/schedule` | `{"enabled":true,"start":"22:00","end":"07:00","days":127}` | `{enabled,start,end,days}` | both |

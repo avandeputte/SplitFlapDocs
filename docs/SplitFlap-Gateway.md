@@ -141,6 +141,15 @@ reads it from here, so you set the grid **once**, on the gateway.
   **discarded** (too long for the receive buffer, or never terminated — these used to
   vanish silently), the frames that arrived corrupt, and the longest frame seen, and
   from which you start the [whole-wall soak test](Module-Diagnostics.md#the-soak-test).
+  Since *(v3.16)* it also lists **recent anomalies**: not just how many frames went wrong
+  but which module had the bus, what it was being asked and when. Discarded frames,
+  replies that would not parse, reads that only answered on the second ask, reads never
+  answered, and IDs that look like two modules all appear there, and `GET
+  /api/bus/incidents` returns the same list. It survives until the gateway restarts.
+- **A bus monitor that remembers** — the Monitor tab keeps the last **512 frames**
+  *(v3.16, up from 64)*, which is a minute or more of a busy wall, so an intermittent
+  fault leaves a record whether or not the tab was open. If frames were overwritten
+  before you looked, the log says so in its own row rather than leaving a silent gap.
 - **Home Assistant discovery** — opt-in on the Settings tab (needs MQTT). Creates a gateway
   device with a Display text entity, Maintenance/Quiet switches, and a set of diagnostic
   sensors. *(This is the gateway's own HA device — the companion adds more; see
