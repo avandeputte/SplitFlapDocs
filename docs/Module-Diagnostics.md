@@ -248,7 +248,7 @@ and what to do:
 |---|---|---|
 | **The bus loses long frames** — short replies fine, long ones lost, worst modules first | the line, not the modules | the 120 Ω termination at **both** ends, then total cable length and any stub, then the baud rate |
 | **Dropping out at every size** — the shortest reply fails as often as the longest | power or contact at those modules | re-seat them, check the pogo pins and the rail voltage in the snapshot; neighbours point at a shared backplane segment |
-| **Cannot send their dump** — every short reply arrives, not one dump ever does | the module's calibration map has grown too large for its firmware to assemble that reply | erase the map and restore from your backup, which writes the entries one at a time (see below) |
+| **No dump** — every short reply arrives, not one dump ever does, on either address form and after a second ask | the reply is never completed. The report says whether bytes arrived and were discarded, or whether nothing arrived at all | run the reply-size probe and the snapshot on that module: a climbing boot count means it restarts mid-reply; discards point at the line or at two modules talking at once (see below) |
 | **Replies collide in broadcasts** — fine asked alone, missing or damaged in roll calls | two modules talking at once | Identify, then compare serial numbers and firmware versions |
 | **Two modules share an ID** — one ID answered twice in a broadcast | exactly that | Identify lists both serials; give one a new ID |
 | **Writes do not stick** | the value is not stored, or not read back as written | the snapshot's EEPROM verify: *FAILED* means a worn chip |
@@ -259,24 +259,31 @@ live tally (one row per module, `[ok, tries]` per kind of traffic plus the longe
 current and the worst miss streak), `POST /api/flap/soak/cancel` to stop early. The soak, the
 probe and the self-tests refuse to run over one another (`409`).
 
-### A full calibration map can silence a module's dump
+### Why a long reply is the fragile one
 
-Worth knowing before you fine-tune all 64 flaps on a module. On module firmware **v32**, a
-module whose map is completely full can no longer send its EEPROM dump at all: it answers `v`
-and `Q` normally, and `d`/`A` never arrive, until the map is erased. Its backups fail from then
-on and its calibration cannot be read, while the display keeps working — which is the puzzle
-reported as *"the module stopped answering `mXA`; erasing the EEPROM fixed it."* The module
-assembles the whole reply before it sends anything, and a full map does not fit.
+Every module on the bus hears every other module's traffic. A calibration dump is around 700
+bytes and a module's receive buffer is 64, so **each long reply overruns the receive buffer of
+every other module.** The module firmware copes safely but bluntly: once bytes are lost it
+drops everything it reads until a line terminator arrives, which means the next command
+addressed to it is the one that gets eaten. It then looks silent while it is only resyncing.
 
-Until the module firmware streams its dump:
+Since gateway **v3.15.2** that is handled for you: a bare terminator goes out before every long
+read to clear that state, an unanswered long read is asked once more before it counts as a
+miss, the gap after a long reply is longer than the module's resync timeout, and broadcasts are
+asked sixteen modules at a time instead of the whole wall at once. The report counts how often
+the second ask was the one that worked, under *long read(s) only answered when asked twice*. On
+a healthy wall that count is zero.
 
-- **Back up before you fully calibrate**, not after.
-- **Fine-tune only the flaps that need it.** Total Steps and Home Offset get a reel most of the
-  way; a map with a handful of entries dumps without trouble.
-- **To recover a module that has stopped dumping**, erase its map (`m<id>e`, or Factory Reset in
-  its Info dialog) and restore it from your backup. The restore writes the entries one at a
-  time, which the module takes without complaint — it is only the *reply* that cannot be
-  assembled, not the storage.
+If a module still never produces a dump, the report now tells you which of two things it saw:
+
+- **Bytes arrived and the gateway discarded them.** Something is being sent and not surviving:
+  the line, or two modules talking at once. Check termination and look for a duplicated ID.
+- **Nothing arrived at all.** The module is not starting the reply. Run the snapshot on it twice
+  around an attempted backup: a boot count that climbs means it restarts mid-reply.
+
+A working stopgap in either case is to erase the module's map (`m<id>e`, or Factory Reset in its
+Info dialog) and restore it from your backup, which writes the entries one at a time. That makes
+the reply as short as it can be while you chase the cause.
 
 ---
 
