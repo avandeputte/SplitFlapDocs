@@ -252,6 +252,7 @@ and what to do:
 | **Replies collide in broadcasts** — fine asked alone, missing or damaged in roll calls | two modules talking at once | Identify, then compare serial numbers and firmware versions |
 | **Two modules share an ID** — one ID answered twice in a broadcast | exactly that | Identify lists both serials; give one a new ID |
 | **Writes do not stick** | the value is not stored, or not read back as written | the snapshot's EEPROM verify: *FAILED* means a worn chip |
+| **A long read failed, a shorter one worked** | the module is there and the reply *length* is the problem | the snapshot on that module: on firmware v33 and later it also reports how often its receive buffer overflowed and whether its broadcast replies went out late |
 | **Never answered** | not on the bus, or not on this ID | power, the pogo pins, a broken trace; Identify to see what is really out there |
 
 ### The trace

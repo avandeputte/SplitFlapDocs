@@ -144,8 +144,9 @@ reads it from here, so you set the grid **once**, on the gateway.
   Since *(v3.16)* it also lists **recent anomalies**: not just how many frames went wrong
   but which module had the bus, what it was being asked and when. Discarded frames,
   replies that would not parse, reads that only answered on the second ask, reads never
-  answered, and IDs that look like two modules all appear there, and `GET
-  /api/bus/incidents` returns the same list. It survives until the gateway restarts.
+  answered, reads where a long reply failed and a shorter one worked in its place, and IDs
+  that look like two modules all appear there, and `GET /api/bus/incidents` returns the same
+  list. It survives until the gateway restarts.
 - **A bus monitor that remembers** — the Monitor tab keeps the last **512 frames**
   *(v3.16, up from 64)*, which is a minute or more of a busy wall, so an intermittent
   fault leaves a record whether or not the tab was open. If frames were overwritten
