@@ -254,6 +254,33 @@ and what to do:
 | **Writes do not stick** | the value is not stored, or not read back as written | the snapshot's EEPROM verify: *FAILED* means a worn chip |
 | **Never answered** | not on the bus, or not on this ID | power, the pogo pins, a broken trace; Identify to see what is really out there |
 
+### The trace
+
+Every frame of the run is recorded, and you can download it *(gateway v3.17)*. The report says
+what happened; the trace says what was on the wire — which reply came back short, what the bytes
+were, how long the gap before the retry was. **Send it with a bug report**: it is the difference
+between someone guessing at your wall and reading it.
+
+The link sits under the soak result, or `GET /api/flap/soak/log`. It is kept after every run,
+**clean or not**, because a trace from a healthy wall is the baseline a broken one is read
+against, and it survives a reboot and a firmware update until the next run replaces it.
+
+The file opens with the gateway version, the time, the bus settings and every module with its
+firmware version and serial number, so it stands on its own for someone who has never seen that
+wall. Then one line per frame: milliseconds since the start, direction, and the frame.
+
+```text
+       0 # SplitFlap Gateway 3.17.0 -- soak test
+       0 # module   0  fw 32    sn 304C55333832E686300D
+     128 T mXA304C55333832E686300D\n
+     252 R m00A:32:0:304C55333832E686300D:2752:4096:1:0::64: ABCDEF…  [+18 B, 114 total]
+```
+
+A 15-module two-minute run is about 40 KB. Long healthy replies are cut to their first 96 bytes
+with the true length noted, because a successful dump's content is predictable; a frame the
+gateway discarded is kept byte for byte, because those bytes are the evidence. Nothing is
+written to flash while the test runs, so the recording cannot disturb what it measures.
+
 Over REST: `POST /api/flap/soak` `{"minutes":10}` (1–60), `GET /api/flap/soak/status` for the
 live tally (one row per module, `[ok, tries]` per kind of traffic plus the longest reply, the
 current and the worst miss streak), `POST /api/flap/soak/cancel` to stop early. The soak, the
