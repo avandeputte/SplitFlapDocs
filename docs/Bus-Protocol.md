@@ -48,6 +48,36 @@ special cases.
 | Star with ID range | `m*v0-49` | Broadcast query to a sub-range of IDs (`v` and `A` only) |
 | Literal `X` | `mXH…` | Provisioning address — every module processes it, matching by serial number |
 
+### Checksummed frames *(module firmware v33+, gateway v3.18+)*
+
+Any frame may be sent as `~HHHH<frame>` instead of `<frame>`, where `HHHH` is the
+**CRC-16/CCITT-FALSE** of the frame — polynomial `0x1021`, initial value `0xFFFF`, no
+reflection, no final XOR — as four hex digits. In Python that is
+`binascii.crc_hqx(frame, 0xFFFF)`; the check value for `123456789` is `29B1`.
+
+```text
+~C500m05v              a checksummed version query
+~5E12m05v:33:5:A3F2…   the reply, checksummed in turn
+```
+
+Rules worth knowing:
+
+- **Opt in per frame.** A module on v32 or earlier skips the prefix, runs the frame unchecked
+  and answers plain, so a checksummed frame is safe to send to a mixed wall.
+- **Always terminate a checksummed frame.** The module decides where the frame ends before it
+  checks it.
+- **Replies follow the request.** A checksummed request gets checksummed replies, staggered
+  broadcast replies included; a plain request gets plain ones. Advertisements are always plain.
+- **A frame that fails is dropped silently** and counted in the module's `crcErrors`. A failed
+  query looks like silence and a failed write simply does not happen, so read back if you need
+  to be sure.
+- **The checksum protects the wire, not the data.** A corrupt EEPROM cell is sent faithfully,
+  with a valid checksum.
+
+The gateway sends checksummed frames to modules that report v33 or later, for reads, writes,
+restores and the version query, and leaves display content plain: five extra bytes on a
+six-byte display command is 80% more traffic for a frame the next update overwrites.
+
 ### Staggered broadcast replies
 
 The bus is half-duplex, so if every module answered a broadcast query (`m*v`, `m*A`) at
