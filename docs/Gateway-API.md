@@ -87,7 +87,8 @@ The SplitFlap Gateway also carries a whole **hardware-maintenance tier** under `
 version/EEPROM queries, calibration, provisioning, self-diagnostics, per-module flap-set
 config, restore-by-serial, and the bus tests — `POST /api/flap/probe` with
 `GET /api/flap/probe/status` *(v3.14)*, and `POST /api/flap/soak` with `…/soak/status` and
-`…/soak/cancel`, with `…/soak/snapshot` and `…/soak/rollback` to keep or replay the calibration
+`…/soak/cancel`, `…/soak/log` for the raw trace of the last run *(v3.17)*, with
+`…/soak/snapshot` and `…/soak/rollback` to keep or replay the calibration
 it read before it began *(v3.15)*, both described in
 [Module Diagnostics](Module-Diagnostics.md#when-a-module-answers-short-questions-but-not-long-ones).
 The Matrix Gateway omits all of it by design: its modules are drawn, so there is nothing to

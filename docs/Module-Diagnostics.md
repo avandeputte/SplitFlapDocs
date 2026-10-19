@@ -276,9 +276,10 @@ wall. Then one line per frame: milliseconds since the start, direction, and the 
      252 R m00A:32:0:304C55333832E686300D:2752:4096:1:0::64: ABCDEF…  [+18 B, 114 total]
 ```
 
-A 15-module two-minute run is about 40 KB. Long healthy replies are cut to their first 96 bytes
-with the true length noted, because a successful dump's content is predictable; a frame the
-gateway discarded is kept byte for byte, because those bytes are the evidence. Nothing is
+Frames are recorded **whole** — a combined dump appears with its entire calibration map — and
+coverage is complete: every frame the gateway's counters see is in the file. It costs about
+**2 KB per module-minute**, so a 64-module half-hour run comes to 3.6 MB and fits; a longer run,
+or a wall past a hundred modules, keeps the most recent 4 MB and says so in the file. Nothing is
 written to flash while the test runs, so the recording cannot disturb what it measures.
 
 Over REST: `POST /api/flap/soak` `{"minutes":10}` (1–60), `GET /api/flap/soak/status` for the
