@@ -164,6 +164,7 @@ Over REST, the gateway sequences the motor-driven tests as a job you poll:
 
 | Call | What happens |
 |---|---|
+| `POST /api/flap/stats` `{"id":38}` | *(v3.18)* The snapshot on its own: no self-test, nothing moves. On module firmware v33+ it also carries `rxOverflows`, `bcastSent`, `bcastLate` and `crcErrors` |
 | `POST /api/flap/diag` `{"id":38}` | Returns the snapshot inline as `q`, and starts the Hall test |
 | `GET /api/flap/diag/status` | `state` is `pending`, then `done` with the result **once** (the next read says `idle`), or `timeout` |
 | `POST /api/flap/diag/mech` `{"id":38,"revs":10}` | Starts the mechanical test; `revs` 5–20 is honoured on v29+ |
@@ -287,6 +288,21 @@ Over REST: `POST /api/flap/soak` `{"minutes":10}` (1–60), `GET /api/flap/soak/
 live tally (one row per module, `[ok, tries]` per kind of traffic plus the longest reply, the
 current and the worst miss streak), `POST /api/flap/soak/cancel` to stop early. The soak, the
 probe and the self-tests refuse to run over one another (`409`).
+
+### What a v33 module counts about itself
+
+Module firmware **v33** keeps four counters and reports them in its snapshot, which the gateway
+shows in the module's Info dialog and returns from `POST /api/flap/stats` *(gateway v3.18)*:
+
+| Counter | What it tells you |
+|---|---|
+| **Receive overflows** | How often bytes arrived while the module's receive buffer was full, which happens only while it is busy — turning, calibrating, writing EEPROM. If this climbs on a module that was idle, something else is going on. |
+| **Broadcast replies sent** | How many staggered replies the module actually transmitted. **Compare it with what the gateway heard**: if the module sent more than you received, the losses were on the wire; if the counts agree, the module is answering everything you asked. |
+| **Late replies** | How many of those went out after their slot, because carrier sense held them back or the module was busy when its turn came. |
+| **Checksum failures** | Checksummed frames the module dropped because they did not match. Should be zero. |
+
+They reset at boot, and the boot count in the same snapshot tells you when that was, so take the
+difference between two readings.
 
 ### Why a long reply is the fragile one
 
