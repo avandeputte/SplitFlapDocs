@@ -48,13 +48,28 @@ curl http://<gateway>/api/modules/firmware/status
 | Go | A module starts the image only when it holds every page and the whole image matches its CRC |
 | Come back | Each module is asked what it now runs |
 
-A run is about **75 seconds**, mostly the pages. The gateway reserves the bus for the whole
-time, and nothing else can use it until the run ends.
+A run is about **80 seconds**, mostly the pages, **however many modules you are updating**:
+eighteen modules measured at 83 seconds, three at 72. The gateway reserves the bus for the
+whole time, and nothing else can use it until the run ends.
 
 **A module takes about 30 seconds to answer again** after it starts the new firmware: it
 restarts, re-checks the image, waits out the staggered start-up that stops a wall drawing its
 inrush at once, and homes its reel. Silence in that window is normal, and the gateway waits it
 out before deciding anything.
+
+## Cancelling
+
+A run can be cancelled, and it stops within a few seconds. Be clear about what it leaves
+behind, though: once a module has taken its first page it no longer holds a valid firmware, so
+its targets stay in their bootloaders with their reels blank, and after eight seconds without
+bus traffic they forget which pages they had received.
+
+That is the bootloader refusing to start a half-written image, not damage. **Run the update
+again** and they recover, which takes a normal run's time. A module in that state reports
+*reason 2* to the probe, meaning it has no valid firmware to go back to.
+
+Cancelling before the first page is sent is free: those modules return to the firmware they
+have.
 
 ## When something goes wrong
 
