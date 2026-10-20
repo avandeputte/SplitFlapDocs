@@ -79,6 +79,7 @@ nav:
   - Build it:
       - Hardware: Hardware.md
       - Module Firmware: Module-Firmware.md
+      - Updating Modules Over the Bus: Module-Firmware-Updates.md
       - Building a UPDI Flasher: UPDI-Flasher.md
       - Flashing Modules: Flashing-Modules.md
       - Provisioning: Provisioning.md
