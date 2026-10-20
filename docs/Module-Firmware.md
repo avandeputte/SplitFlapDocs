@@ -3,6 +3,9 @@
 Every split-flap module runs the **SplitFlap Universal Firmware** — one binary, flashed
 once to each module. Identity, calibration and the flap set are stored in the chip's EEPROM
 and assigned *after* flashing, so there is nothing to change per module before you upload.
+From **v35** that one flash is the only one that needs a programmer: the firmware carries a
+bootloader, and every later version reaches the whole wall over the bus
+([Updating modules over the bus](Module-Firmware-Updates.md)).
 
 > **Repo:** [github.com/avandeputte/SplitFlapUniversalFirmware](https://github.com/avandeputte/SplitFlapUniversalFirmware)
 > · target: **ATtiny1616** · toolchain: **PlatformIO** · programmer: **SerialUPDI**
@@ -28,7 +31,12 @@ Two things to get right, and the rest is two commands per module:
   the brown-out detector that stops a sagging supply from corrupting EEPROM. Skip this and
   every upload wipes the module's identity.
 
-Then either **flash the prebuilt `firmware.hex`** from the
+The quickest route needs neither: the
+**[web flasher](https://avandeputte.github.io/SplitFlapUniversalFirmware/)** does the whole
+sequence — fuses included, and the right ones for the image — from Chrome or Edge, with
+nothing installed.
+
+Otherwise either **flash the prebuilt `firmware.hex`** from the
 [latest release](https://github.com/avandeputte/SplitFlapUniversalFirmware/releases/latest)
 with the free `avrdude` tool — no VS Code, no compiler — or **build from source** with VS
 Code + PlatformIO (`pio run -t fuses`, then `pio run -t upload`). Both routes, step by
@@ -40,6 +48,12 @@ version, ID and serial.
 
 > **Upgrading to v32?** Run the fuses step once more on every module — it enables the
 > brown-out detector and does not erase EEPROM. See [Flashing Modules](Flashing-Modules.md#the-fuses-and-why-they-come-first).
+
+> **Upgrading to v35?** The fuses change again — `BOOTEND` reserves the kilobyte the
+> bootloader lives in, and **the fuse has to match the image** or the module does not start.
+> The web flasher works this out from the image; by hand it is `0x04` for v35 and later and
+> `0x00` for v34 and earlier. This is the **last flash over UPDI**: afterwards the gateway
+> updates the wall [over the bus](Module-Firmware-Updates.md).
 
 ---
 

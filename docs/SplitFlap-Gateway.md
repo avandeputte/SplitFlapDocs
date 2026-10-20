@@ -93,7 +93,10 @@ reads it from here, so you set the grid **once**, on the gateway.
   firmware version. The list is *sticky* — it survives reboots and only drops a module after
   6 hours unseen. Each card has **⌂ Home**, **ℹ Info** (live query + the module's stored home
   offset, steps/rev, flap map — editable on newer module firmware), and a **🗑** menu (erase
-  EEPROM / factory reset / de-provision). **↻ Identify All** rediscovers the bus.
+  EEPROM / factory reset / de-provision). **↻ Identify All** rediscovers the bus. The tab
+  also carries **Module Firmware** *(v4.0)* — upload a module firmware image once and update
+  the whole wall over the bus, [described here](Module-Firmware-Updates.md) — and **Whole
+  Wall**, the actions that reach every module in one broadcast.
 - **Display** — a live render of the wall, a **Home All** button, and boxes to send text
   across the modules, a single character (to one module or broadcast), or a specific flap by
   index.
@@ -106,7 +109,8 @@ reads it from here, so you set the grid **once**, on the gateway.
   **Download Log** button, and a **Send Frame** box (with a **Raw** option) for hand-crafted
   commands.
 - **Settings** — WiFi, MQTT, Timezone, **Quiet Time schedule**, the **Companion App**
-  registration, Display Layout, Home Assistant, OTA update, and calibration backup/restore.
+  registration, Display Layout, Home Assistant, **Gateway Firmware** (the ESP32's own
+  firmware, not the modules'), and calibration backup/restore.
 - **Status** — network, system health (uptime, heap, per-task stack), the RS-485 bus
   counters, the clock (RTC + NTP), and whether the companion is checked in.
 
@@ -155,11 +159,24 @@ reads it from here, so you set the grid **once**, on the gateway.
   device with a Display text entity, Maintenance/Quiet switches, and a set of diagnostic
   sensors. *(This is the gateway's own HA device — the companion adds more; see
   [Home Assistant](Home-Assistant.md).)*
-- **OTA** — update over WiFi after the first USB flash, from Settings or `http://<ip>/ota`.
+- **Module firmware over the bus** *(v4.0)* — from module firmware **v35** every module
+  carries a bootloader, and the gateway can reflash a whole wall over the RS-485 wire it is
+  already on: upload the release's `firmware-update.bin` on **Modules ▸ Module Firmware**,
+  pick the modules or leave the list empty for all of them, and start. The 240 pages are
+  broadcast once for every module at a time, so a run takes about **80 seconds whether it is
+  one module or eighteen**; each module then reports which pages it actually wrote and read
+  back, and only the gaps are resent. IDs and calibration live in EEPROM, which the
+  bootloader never touches, so a wall comes back calibrated. Modules older than v35 are
+  skipped and keep displaying throughout. → **[Updating modules over the
+  bus](Module-Firmware-Updates.md)**
+- **Gateway firmware over WiFi** — update the gateway itself after the first USB flash, from
+  **Settings ▸ Gateway Firmware** or `http://<ip>/ota`.
 
-## Updating the firmware
+## Updating the gateway's firmware
 
-After the initial USB flash, all subsequent updates can be done over WiFi.
+After the initial USB flash, all subsequent updates can be done over WiFi. This section is
+about **the gateway's own firmware** — the ESP32's. The modules' firmware is a different
+image and travels a different path: [over the bus](Module-Firmware-Updates.md).
 
 ### Browser upload
 
@@ -168,8 +185,9 @@ After the initial USB flash, all subsequent updates can be done over WiFi.
    from the [Releases](https://github.com/avandeputte/SplitFlapGateway/releases) page.)
 2. The file to upload is **`firmware.bin`** — the plain application image. **This is the
    only file to upload over OTA.**
-3. Open the gateway web UI → **Settings** → click **Open Firmware Updater →**
-4. Select `firmware.bin` and click **Upload Firmware**
+3. Open the gateway web UI → **Settings** → **Gateway Firmware** → click
+   **Update the gateway →**
+4. Select `firmware.bin` and click **Upload Gateway Firmware**
 5. The gateway reboots automatically on success. Confirm the new build by checking the version badge in the header (e.g. **v3.5.0**).
 
 > **Which file?** PlatformIO emits several files in `.pio/build/esp32s3_devmodule/` —

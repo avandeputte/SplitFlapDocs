@@ -2,11 +2,12 @@
 
 Every split-flap module runs the same [Universal Firmware](Module-Firmware.md) binary, flashed
 once over **UPDI** with a [flasher you build from a USB-serial adapter](UPDI-Flasher.md). There
-are two ways to get the firmware onto a chip, and they end in the same place:
+are three ways to get the firmware onto a chip, and they end in the same place:
 
 | Route | You need | Best for |
 |---|---|---|
-| **[A. Flash a release](#route-a-flash-a-release-no-compiler)** | The flasher, `firmware.hex` from the latest release, and the free `avrdude` tool | Everyone who just wants the current firmware on their modules |
+| **[The browser flasher](#the-quickest-way-the-browser-flasher)** | The flasher and Chrome, Edge or Opera on a desktop | Everyone — nothing to install, and it works out the fuses itself |
+| **[A. Flash a release](#route-a-flash-a-release-no-compiler)** | The flasher, `firmware.hex` from the latest release, and the free `avrdude` tool | Scripting a wall, or a browser that cannot talk to serial ports |
 | **[B. Build from source](#route-b-build-from-source-platformio)** | The flasher, VS Code and the PlatformIO extension | Changing the firmware, or following the project's own toolchain |
 
 Either way it is **two commands per module**: one writes the **fuses** (once per chip), one
@@ -46,6 +47,25 @@ Use that name wherever the commands below say `PORT`.
 
 ---
 
+## The quickest way: the browser flasher
+
+Open the **[web flasher](https://avandeputte.github.io/SplitFlapUniversalFirmware/)** in
+Chrome, Edge or Opera on a desktop, pick the adapter's serial port, and click **Flash
+module**. Nothing to install, and it does everything the two routes below do, in order:
+check the chip, save the module's EEPROM (its ID and calibration) to a backup file, write
+only the fuses that differ, flash the current release page by page and read it back, check
+the settings survived, and restart the module. Then attach the next module and click
+**Flash next module**.
+
+It picks the fuses **from the image**, including the one v35 changed, so it upgrades and
+downgrades alike without you having to think about it. Firefox and Safari have no Web
+Serial API; for those, or for scripting, use avrdude below. To work offline, download
+`flasher.html` from the Assets of the
+[latest release](https://github.com/avandeputte/SplitFlapUniversalFirmware/releases/latest)
+and open that file instead.
+
+---
+
 ## The fuses, and why they come first
 
 Fuses are the chip's configuration: the clock, the brown-out detector, and — the one that
@@ -62,6 +82,15 @@ unprovisioned blank.
 > there — the cause of modules "forgetting" their settings after a power cycle. **If a
 > module's fuses were written before v32, write them once more** (either route below).
 > Writing fuses does not erase EEPROM; the module keeps its ID and calibration.
+
+> **Firmware v35 changed one too — and it has to match the image.** v35 puts a
+> **bootloader** in the first kilobyte of flash, which is what lets the gateway
+> [update a whole wall over the bus](Module-Firmware-Updates.md). Reserving that kilobyte is
+> the `BOOTEND` fuse: **`0x04` for v35 and later, `0x00` for v34 and earlier**. A v35 image
+> on a chip with `0x00`, or an older image on a chip with `0x04`, **does not run** — so when
+> you move between those versions by hand, write the fuses again with the value for the image
+> you are about to flash. The browser flasher reads the value out of the image and does this
+> for you.
 
 ---
 
@@ -93,14 +122,14 @@ avrdude -c serialupdi -p attiny1616 -P PORT -b 57600 \
   -U fuse5:w:0xC5:m \
   -U fuse6:w:0x06:m \
   -U fuse7:w:0x00:m \
-  -U fuse8:w:0x00:m \
+  -U fuse8:w:0x04:m \
   -U lock:w:0xC5:m
 ```
 
 Windows, one line:
 
 ```
-avrdude -c serialupdi -p attiny1616 -P COM5 -b 57600 -U fuse0:w:0x00:m -U fuse1:w:0x54:m -U fuse2:w:0x02:m -U fuse4:w:0x00:m -U fuse5:w:0xC5:m -U fuse6:w:0x06:m -U fuse7:w:0x00:m -U fuse8:w:0x00:m -U lock:w:0xC5:m
+avrdude -c serialupdi -p attiny1616 -P COM5 -b 57600 -U fuse0:w:0x00:m -U fuse1:w:0x54:m -U fuse2:w:0x02:m -U fuse4:w:0x00:m -U fuse5:w:0xC5:m -U fuse6:w:0x06:m -U fuse7:w:0x00:m -U fuse8:w:0x04:m -U lock:w:0xC5:m
 ```
 
 Each fuse ends with `1 byte written, 1 verified`. What they set:
@@ -114,11 +143,11 @@ Each fuse ends with `1 byte written, 1 verified`. What they set:
 | `fuse5` SYSCFG0 | `0xC5` | **EEPROM retained across flashes** (`EESAVE`), UPDI pin left as UPDI. |
 | `fuse6` SYSCFG1 | `0x06` | Start-up delay. |
 | `fuse7` APPEND | `0x00` | No application data section. |
-| `fuse8` BOOTEND | `0x00` | No bootloader section. |
+| `fuse8` BOOTEND | `0x04` | A 1 KB boot section for the bootloader that takes [updates over the bus](Module-Firmware-Updates.md) (firmware **v35 and later**). For **v34 or earlier write `0x00`** — the fuse must match the image or the module does not start. |
 | `lock` | `0xC5` | Unlocked. |
 
 These are the same values `platformio.ini` writes with `pio run -t fuses`. If a future
-release changes a fuse, its release notes will say so.
+release changes a fuse, its release notes will say so — v32 changed `fuse1`, v35 `fuse8`.
 
 ### Step 2 — write the firmware
 
@@ -187,7 +216,7 @@ see [its install guide](https://docs.platformio.org/en/latest/core/installation/
 On the bus, a module answers a version query with its firmware version, ID and serial:
 
 ```
-m<ID>v        →  m<ID>v:32:<ID>:<serialNumber>
+m<ID>v        →  m<ID>v:35:<ID>:<serialNumber>
 ```
 
 A freshly flashed, never-provisioned module has ID **255**, does not answer numeric
@@ -204,6 +233,13 @@ lives in EEPROM and the fuses keep it, **updating firmware on a provisioned, cal
 wall changes nothing** about which module is which or how it is calibrated. Keep a
 [calibration backup](SplitFlap-Gateway.md) from the gateway anyway; it is the recovery path
 if a chip is ever wiped or replaced.
+
+**From v35 this is the last time a wall is flashed module by module.** That image carries a
+bootloader, so every update after it goes out over the RS-485 wire the modules are already
+on: upload the release's `firmware-update.bin` to the gateway and it updates the whole wall
+in about eighty seconds, without opening the frame. See
+**[Updating modules over the bus](Module-Firmware-Updates.md)**. UPDI stays the recovery
+path, and the bootloader itself is never overwritten.
 
 ---
 

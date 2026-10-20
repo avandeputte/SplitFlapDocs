@@ -31,9 +31,14 @@ a module is all the wiring there is. See **[Hardware](Hardware.md)**.
 
 Flash the **[Universal Firmware](Module-Firmware.md)** to every module (same binary for all)
 with a [flasher you build from a USB-serial adapter](UPDI-Flasher.md). No compiler needed: the
-prebuilt `firmware.hex` from the latest release and `avrdude` do it in two commands per
-module — fuses once per chip (so the EEPROM survives), then the firmware.
+[web flasher](https://avandeputte.github.io/SplitFlapUniversalFirmware/) does it from Chrome
+or Edge with nothing installed, and the prebuilt `firmware.hex` plus `avrdude` do it in two
+commands per module — fuses once per chip (so the EEPROM survives), then the firmware.
 → **[Flashing Modules](Flashing-Modules.md)**
+
+Do this once. From firmware **v35** the modules carry a bootloader, so every later version
+goes out from the gateway [over the bus](Module-Firmware-Updates.md) instead — the whole wall
+in about eighty seconds, with nothing to unmount.
 
 ## Step 3 — Provision & calibrate  *(Path A only)*
 

@@ -11,6 +11,8 @@ through simply waits for the image to be sent again.
 
 ## What you need
 
+- **A gateway on firmware 4.0.0 or later** — the version badge in the dashboard header says
+  which one you have, and it updates [from its own Settings tab](SplitFlap-Gateway.md#updating-the-gateways-firmware).
 - **Modules on firmware v35 or later.** Older ones have no bootloader. The gateway skips them
   and tells you, and they are not disturbed by the update traffic: their firmware only acts on
   lines beginning with `m` or `~`, and update frames begin with `#`.
@@ -18,9 +20,13 @@ through simply waits for the image to be sent again.
   240 pages of 64. The gateway checks the image's own CRC before storing it, so a truncated
   download cannot reach a wall.
 
-Getting the bootloader onto a module in the first place takes one last flash over UPDI, with
-the web flasher or as in the module firmware's flashing guide. After that every update can go
-over the bus.
+Getting the bootloader onto a module in the first place takes **one last flash over UPDI**.
+That image reserves the first kilobyte of flash with the `BOOTEND` fuse, which has to match
+the image — `0x04` from v35, `0x00` before it — so the
+[web flasher](https://avandeputte.github.io/SplitFlapUniversalFirmware/), which reads the
+right value out of the image, is the easiest way to do it; by hand, see
+[Flashing Modules](Flashing-Modules.md#the-fuses-and-why-they-come-first). After that every
+update can go over the bus.
 
 ## Doing it
 
@@ -28,7 +34,14 @@ over the bus.
 to update everything eligible or name the ones you want, and start. The card shows the phase,
 the pages as they go out, and a row per module with the version it ran before and runs now.
 
-Over REST, the same thing:
+![The Module Firmware card on the Modules tab, with an image uploaded and ready to send](module-firmware-card.png)
+
+The gateway keeps the image it was given, and says which version it holds, so the same one
+can be sent again — to a module that was powered down during a run, or to a module added to
+the wall later — without uploading it twice.
+
+Over REST ([full reference](Gateway-API.md#the-modules-own-firmware-over-the-bus-v40)), the
+same thing:
 
 ```bash
 curl -X PUT --data-binary @firmware-update.bin http://<gateway>/api/modules/firmware

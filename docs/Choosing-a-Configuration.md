@@ -100,7 +100,8 @@ care — with the same hardware-tooling caveats as C.)*
 | HA sidebar app + HACS entities | — | — | — | — | — | — | ✅ |
 | [Vestaboard-compatible API](Vestaboard-API.md) | — | — | — | — | — | — | ✅ |
 | [MCP server](MCP-Server.md) (LLM control) | — | — | — | — | — | — | ✅ |
-| OTA update of the bus controller | — ⁵ | — ⁵ | ✅ | ✅ | ✅ ⁵ | ✅ ⁵ | ✅ |
+| Update the bus controller over WiFi | — ⁵ | — ⁵ | ✅ | ✅ | ✅ ⁵ | ✅ ⁵ | ✅ |
+| [Update the modules over the bus](Module-Firmware-Updates.md) | — | ⚠️ ⁹ | — ¹⁰ | ✅ | — ¹⁰ | ✅ | ✅ |
 | Settings survive a host reinstall | — | — | ✅ ⁶ | ✅ ⁶ | ✅ ⁶ | ✅ ⁶ | ✅ (mirrored to the gateway) |
 | Resume what was playing after a restart | — | — | — | — | — | — | ✅ |
 
@@ -124,8 +125,8 @@ care — with the same hardware-tooling caveats as C.)*
 4. splitflap-os is a Flask app with HTTP endpoints its own UI calls (`/connection`,
    `/universal/*`, …), but there's no documented/public API. The gateway and the companion
    both ship one (the gateway's is documented in [Gateway API](Gateway-API.md)).
-5. The gateway updates OTA; the Pi (the splitflap-os host) updates like any Linux box
-   (`git pull` / reinstall).
+5. The gateway updates itself over WiFi from its own web UI; the Pi (the splitflap-os
+   host) updates like any Linux box (`git pull` / reinstall).
 6. Gateway settings (WiFi, MQTT, grid, calibration backup) live on the ESP32 itself;
    splitflap-os's own content settings live on its Pi.
 7. The companion has **its own app library** (plus your own uploads) and runs apps in
@@ -136,6 +137,11 @@ care — with the same hardware-tooling caveats as C.)*
    settings — apps render in English. (Forks carrying i18n exist.) Note that localization
    is only half the problem: showing `É` also needs a reel with `É` printed on it, which is
    what the [flap-set](Flaps-and-Character-Sets.md) rows above are about.
+9. Not from splitflap-os, but the firmware's own `tools/busflash.py` does it from any
+   computer with a USB–RS485 adapter on the bus.
+10. The original firmware has no bootloader, so its modules can only be flashed over UPDI.
+   The Universal Firmware carries one from **v35**, and the modules need that version on
+   them (one last UPDI flash) before the bus can do it.
 
 ## Switching later
 

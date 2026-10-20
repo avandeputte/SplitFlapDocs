@@ -95,6 +95,24 @@ The Matrix Gateway omits all of it by design: its modules are drawn, so there is
 calibrate or provision. That tier is documented in the SplitFlapGateway README and
 `openapi.yaml` (see [the footer](#canonical-sources)).
 
+#### The modules' own firmware, over the bus *(v4.0)*
+
+Not to be confused with the gateway's own firmware ([below](#gateway-firmware-and-ui)): these
+endpoints reflash the **modules**, over RS-485, from an image the gateway stores. They need
+module firmware **v35 or later**; older modules have no bootloader and are skipped. The
+whole procedure, its timings and what a cancelled run leaves behind are in
+[Updating modules over the bus](Module-Firmware-Updates.md).
+
+| Method | Path | Body | Reply | Gateway |
+|---|---|---|---|---|
+| `PUT` | `/api/modules/firmware` | `firmware-update.bin` from a module firmware release, as the raw body — exactly 15,360 bytes. The gateway verifies the image's own CRC and refuses anything else, so a truncated download cannot reach a wall | The stored-image + run state | SplitFlap Gateway only |
+| `GET` | `/api/modules/firmware` | — | What is stored (bytes, CRC, the firmware version read out of the image) and the state of any run | SplitFlap Gateway only |
+| `DELETE` | `/api/modules/firmware` | — | Forgets the stored image | SplitFlap Gateway only |
+| `POST` | `/api/modules/firmware/start` | `{}` for every eligible module, or `{"ids":[23,24,25]}` | Starts the run and **holds the bus exclusively** until it ends — about 80 seconds, however many modules | SplitFlap Gateway only |
+| `GET` | `/api/modules/firmware/status` | — | Phase, pages sent, and a row per module: the version it ran before, the pages it has acknowledged, what it runs now | SplitFlap Gateway only |
+| `POST` | `/api/modules/firmware/cancel` | — | Stops after the current frame. A module that had already taken a page stays in its bootloader until the update is run again | SplitFlap Gateway only |
+| `POST` | `/api/modules/firmware/probe` | `{"id":27}` | Asks one module's bootloader how it is doing: version, why it is there, which image it holds and how many of its 240 pages. A module running its firmware does not answer — which is itself the answer | SplitFlap Gateway only |
+
 ### Display
 
 | Method | Path | Body | Reply | Gateway |
@@ -192,11 +210,14 @@ when turned off; the schedule's `days` is a bitmask, bit 0 = Sunday. Both reset 
 | `GET`/`POST` | `/api/display/brightness` | `{"brightness":1-255}` | Panel brightness, applied to the next frame and persisted; the `brightness` capability token advertises it | Matrix Gateway only |
 | `POST` | `/api/system/reboot` | — | `{ok,rebooting:true}` — replies first, then restarts | Matrix Gateway only |
 
-### OTA & UI
+### Gateway firmware and UI
+
+These update **the gateway itself** — the ESP32. The modules' own firmware goes over the bus
+instead, [above](#the-modules-own-firmware-over-the-bus-v40).
 
 | Method | Path | Body | Reply | Gateway |
 |---|---|---|---|---|
-| `GET` | `/ota` | — | Browser firmware-upload page | both |
+| `GET` | `/ota` | — | Browser page that uploads a new **gateway** firmware | both |
 | `POST` | `/api/ota/upload` | `firmware.bin` — the plain **app image**, never the factory image. Multipart on the physical gateway; on the Matrix Gateway the **raw binary body** (`curl --data-binary @firmware.bin`) | Flashes and reboots | both |
 | `GET` | `/lang/{code}` | — | The dashboard's translation dictionary for one language (keys are the English strings); `404` for a code the firmware doesn't ship | both |
 

@@ -107,6 +107,37 @@ Long, motor-driven commands and multi-line replies cannot be staggered across a 
 one serial number via their `mX…` forms). `A` is the exception — its broadcast form *is*
 supported, staggered on wide 700 ms slots.
 
+### Update mode, and the `#` frames *(module firmware v35+, gateway v4.0+)*
+
+From v35 a module carries a **bootloader** in the first kilobyte of its flash, and a wall can
+be reflashed over this same wire. It is a second, separate frame language, and it only ever
+runs while a module is in update mode:
+
+- **`U` puts a module there** — `m<ID>U`, or `m*U` for the whole wall — and it is accepted
+  **only inside a checksummed frame**, so no amount of line noise can take a wall off the
+  air. Firmware older than v35 ignores it. There is no reply; the module restarts into its
+  bootloader within about 200 ms.
+- **A bootloader frame is a line of hex**: `#`, the frame's bytes in upper-case hex, then a
+  newline — `<to> <command> <payload…> <CRC-16 hi> <CRC lo>`, with `FF` as `to` meaning every
+  module in update mode. A frame that is not valid hex, or fails its CRC, is ignored.
+- **Three commands**: `P` writes one 64-byte page (the image is 240 of them, pages 16–255,
+  and the module reads each one back), `S` asks a module for its state — bootloader version,
+  why it is in update mode, which image it is receiving and a bit per page it has stored —
+  and `G` starts the image, but only when every page is present and the whole image matches
+  its CRC.
+- **Modules running their firmware are not disturbed by any of this.** Their parser only
+  acts on lines beginning with `m` or `~`, so an update can run on a wall where some modules
+  are older than v35 — the gateway skips those, and they keep displaying.
+- **A module in update mode restarts after 8 seconds of silence** on the bus, so an
+  abandoned update never leaves one waiting forever. It keeps the pages it wrote but forgets
+  which they were, and if it had received none it returns to the firmware it has.
+
+The procedure a sender follows, the page and status frame layouts and the timings are in the
+firmware repo's
+[BUS-UPDATE.md](https://github.com/avandeputte/SplitFlapUniversalFirmware/blob/main/BUS-UPDATE.md);
+the gateway's side of it, and what to do when a run goes wrong, is in
+[Updating modules over the bus](Module-Firmware-Updates.md).
+
 ---
 
 ## Command reference
@@ -152,6 +183,7 @@ The default 64-flap set is ` ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$&()-+=;q:%'
 | `i` | `m<ID>i<newId>` | Assign a new bus ID, saved to EEPROM, effective immediately. (First-time assignment on an unprovisioned module uses `mXI` instead.) | ✓ | — |
 | `a` | `m<ID>a<0\|1>` | Auto-home mode: `1` = home on every boot (default); `0` = save position on every move and restore it on boot instead. | ✓ | — |
 | `N` | `m<ID>N<count>:<chars>` | Configure the flap set — see below. | ✓ | — |
+| `U` *(v35)* | `m<ID>U` / `m*U` | Restart into the bootloader and wait for a firmware image — **only honoured inside a checksummed frame** (`~HHHHm*U`), and ignored by firmware older than v35. See [Update mode](#update-mode-and-the-frames-module-firmware-v35-gateway-v40). | ✓ | — |
 
 **`N` in detail.** Both parts are **optional and independent**:
 
@@ -180,18 +212,23 @@ defaults (64 / the built-in set).
 | `F` | `m<ID>F` | Factory-reset EEPROM to firmware defaults (home offset 2832, total steps 4096, auto-home on, map cleared, default flap set) while **preserving the module ID and magic byte** — the module stays addressable, but needs recalibrating. | ✓ | — |
 | `T` | `m<ID>T` | Hall sensor self-test: one revolution, classifies the sensor (codes below). | — | `m<ID>T:<code>:<edges>:<activeSamples>:<fallingEdges>` |
 | `P` | `m<ID>P` | Re-detect Hall polarity: drives one revolution, picks the minority level as active, stores it, then re-homes. Polarity is also auto-detected on first boot and at every `c` calibrate, so `P` is only needed after re-mounting a magnet without a full recalibration. | — | `m<ID>P:<code>:<level>` — code `0` detected / `1` no magnet seen (previous kept); level `0` active-low / `1` active-high (the level now in use) |
-| `Q` | `m<ID>Q` | Diagnostics snapshot — **no motor movement**, fast and safe to poll. | — | `m<ID>Q:<resetCause>:<bootCount>:<vcc_mV>:<eepromOk>:<curIndex>` |
+| `Q` | `m<ID>Q` | Diagnostics snapshot — **no motor movement**, fast and safe to poll. | — | `m<ID>Q:<resetCause>:<bootCount>:<vcc_mV>:<eepromOk>:<curIndex>` — with `:<rxOverflows>:<bcastSent>:<bcastLate>:<crcErrors>` appended in v33 and `:<blVersion>` in v35 |
 | `M` | `m<ID>M` / `m<ID>M<n>` | Mechanical self-test: drives several revolutions and compares steps-per-rev. `<n>` requests more rotations (clamped 5–20, ~4 s each; default run ~20 s). | — | `m<ID>M:<code>:<min>:<max>:<spreadTenthsPct>:<gateActive>:<gateSpan>:<avgMagnetWidth>:<r1>,<r2>,…,<rN>` |
 
 **`Q` fields:**
 
 | Field | Meaning |
 |---|---|
-| `resetCause` | Raw reset-flag bits from the last reset: `0x01` power-on, `0x02` brown-out, `0x04` external, `0x08` watchdog, `0x10` software |
+| `resetCause` | Raw reset-flag bits from the last reset: `0x01` power-on, `0x02` brown-out, `0x04` external, `0x08` watchdog, `0x10` software. **Firmware before v35 always reported `0`** — the core's start-up cleared the flags before the firmware read them |
 | `bootCount` | Boots since the counter last wrapped/cleared (wraps at 255) — a climbing value means the module is silently resetting |
 | `vcc_mV` | Measured supply voltage in millivolts |
 | `eepromOk` | `1` if the EEPROM write-read-verify check passed |
 | `curIndex` | Current flap index (`-1` = position unknown, needs homing) |
+| `rxOverflows` *(v33)* | Times the module's 128-byte receive ring overflowed — only possible while it is busy moving, self-testing or writing EEPROM |
+| `bcastSent` *(v33)* | Broadcast replies this module has sent |
+| `bcastLate` *(v33)* | How many of those had to defer because the bus was not quiet when its slot came round — a few are normal, a climbing share means the wall is crowding its slots |
+| `crcErrors` *(v33)* | Checksummed frames addressed to it that failed their check, i.e. corruption the module caught and refused to act on |
+| `blVersion` *(v35)* | The bootloader's version, or `0` on firmware that has none. Non-zero means the module can be [updated over the bus](Module-Firmware-Updates.md) |
 
 **`T` result codes (Hall self-test):**
 
@@ -350,7 +387,8 @@ overwritten.
 The message format, command vocabulary and EEPROM layout have been **stable since v6**.
 New capability arrives only two ways:
 
-1. **A new command letter** (`A` in v24, `T`/`Q`/`M` in v26, `P` in v30, `N` in v31), or
+1. **A new command letter** (`A` in v24, `T`/`Q`/`M` in v26, `P` in v30, `N` in v31,
+   `U` in v35), or
 2. **New fields appended to the end of an existing reply** — never by moving or
    repurposing an existing field's position.
 
@@ -358,7 +396,8 @@ Examples of the append-only rule in action: `T` gained `<fallingEdges>` in v28; 
 `<gateActive>`/`<gateSpan>` in v27 and `<avgMagnetWidth>` plus the raw rotation list in
 v28; the `A` dump gained `:<flapCount>:<flapChars>` in v31, appended *after* the
 variable-length map so every earlier field stays byte-for-byte identical. An older
-controller keeps working unchanged — it just ignores the tail.
+controller keeps working unchanged — it just ignores the tail. `Q` is the most recent
+example: four bus counters appended in v33, the bootloader version in v35.
 
 Practical parsing rules for controller authors:
 

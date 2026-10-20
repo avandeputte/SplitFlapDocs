@@ -64,6 +64,13 @@ A freshly-flashed module has **no ID** until you [provision](Module-Firmware.md#
 it — it advertises its serial number instead. Assign it an ID from the gateway's Provision
 tab.
 
+**Do I have to take every module down again for a firmware update?**
+Only until they are on firmware **v35**. That one carries a bootloader, so from then on the
+gateway sends a new version to the whole wall over the RS-485 bus it already has — upload the
+release's `firmware-update.bin` on Modules ▸ Module Firmware and start it. IDs and
+calibration live in EEPROM, which the update never touches.
+→ [Updating modules over the bus](Module-Firmware-Updates.md)
+
 **My module's calibration/ID disappeared after I re-flashed it.**
 You skipped the fuse step. Run `pio run -t fuses` **once per chip** — it sets the `EESAVE`
 fuse so EEPROM survives reflashes. Without it, every upload wipes the module.

@@ -68,11 +68,14 @@ about them.
 
 | Row | Healthy | Worth attention |
 |---|---|---|
-| **Last reset cause** | *power-on* (you just powered it) or *none recorded* | **brown-out** — the supply dipped low enough to reset the chip. **watchdog** — the firmware hung and recovered. Both mean the module is resetting when it shouldn't; a climbing boot count confirms it. |
+| **Last reset cause** | *power-on* (you just powered it) or *none recorded* | **brown-out** — the supply dipped low enough to reset the chip. **watchdog** — the firmware hung and recovered. Both mean the module is resetting when it shouldn't; a climbing boot count confirms it. *(Module firmware before v35 always reports no cause — it read the flags after the core had already cleared them, so there "none recorded" means nothing either way.)* |
 | **Boot count** | Small, and not changing between runs | Climbing between polls → the module is silently resetting in the field (supply, wiring, a loose connector). Wraps at 255. |
 | **Supply voltage** | At your design rail: about **5 V** on a 5 V build, **3.3 V** on a 3.3 V build | Flagged **LOW** when a 5 V rail reads under 4.5 V, or a 3.3 V rail under 3.0 V. A sagging rail under-powers the stepper: missed steps, stalls, brown-out resets. Check the supply's current rating and the wiring gauge before anything else. |
 | **EEPROM verify** | *passed* | **FAILED** — the chip could not write and read back a scratch cell. Calibration and identity live in that EEPROM; treat the module as unreliable. (The check runs on the first snapshot after boot and then at most hourly; later snapshots repeat the cached result.) |
 | **Current flap index** | A flap number | *unknown (needs homing)* is normal after power-up until the module has homed; *released* means the motor is idle and unpositioned. |
+| **Receive Overflows** *(module firmware v33+)* | `0` | Anything else is traffic that arrived while the module was mid-move, mid-self-test or writing EEPROM, and did not fit its 128-byte ring. A wall that updates faster than it flips is the usual cause. |
+| **Broadcast Replies Sent** *(v33+)* | Climbing with the roll calls you run, with few or none *late* | A growing share going out **late** means modules are crowding their reply slots — they defer rather than talk over each other, which is the protocol working, but it is a sign the wall is near the limit of what a broadcast round can hold. |
+| **Checksum Failures** *(v33+)* | `0` | Frames this module received, checked and **refused as corrupt**. Any number here is real corruption on the wire — termination, a long stub, a noisy supply — caught before it could act on it. |
 
 ### Hall sensor self-test (`T`)
 
@@ -152,6 +155,8 @@ script, or the [Gateway API](Gateway-API.md) from automation:
 
 ```
 m38Q          → m38Q:<resetCause>:<bootCount>:<vcc_mV>:<eepromOk>:<curIndex>
+                  :<rxOverflows>:<bcastSent>:<bcastLate>:<crcErrors>   (v33+)
+                  :<blVersion>                                      (v35+)
 m38T          → m38T:<code>:<risingEdges>:<activeSamples>:<fallingEdges>
 m38M          → m38M:<code>:<min>:<max>:<spreadTenthsPct>:<gateActive>:<gateSpan>:<avgMagnetWidth>:<r1>,<r2>,...
 m38M20        → mechanical test over 20 rotations (v29+)
@@ -159,6 +164,11 @@ m38M20        → mechanical test over 20 rotations (v29+)
 
 By serial number, for a module that has no ID yet: `mXQ<sn>`, `mXT<sn>`, `mXM<sn>`. Every
 field and result code is specified in [Bus Protocol ▸ Diagnostic commands](Bus-Protocol.md#diagnostic-commands).
+
+The gateway reads `Q` only as far as the v33 counters, so the bootloader version a v35
+module appends is visible on the wire but not in the dialog. To tell which modules can be
+[updated over the bus](Module-Firmware-Updates.md), read their firmware version instead —
+v35 or later has a bootloader — which is what the Module Firmware card does for you.
 
 Over REST, the gateway sequences the motor-driven tests as a job you poll:
 
