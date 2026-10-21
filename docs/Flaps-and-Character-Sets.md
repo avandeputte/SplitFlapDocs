@@ -38,6 +38,45 @@ Both parts are independent — set the count, the characters, or both. They pers
 EEPROM and survive a reflash (as long as you wrote the `EESAVE` fuse; see
 [Module Firmware](Module-Firmware.md#1-flash)).
 
+## Symbol flaps *(gateway v4.1)*
+
+Some reels are printed with symbols — a heart, arrows, a smiley. The bus carries exactly one
+byte per flap and addresses a module **by** that byte, and those symbols have no Windows-1252
+code, so each one travels as a **reserved lowercase letter** — the same arrangement the seven
+colour flaps (`r o y g b p w`) and the classic reel's double-quote flap (`q`) already use.
+
+| Symbol | Letter on the wire | Name | Stand-in | Also accepted |
+|---|---|---|---|---|
+| ♥ | `h` | heart | `*` | ❤ |
+| ↑ | `u` | up | `^` | ⬆ |
+| ↓ | `d` | down | `V` | ⬇ |
+| ☺ | `s` | smiley | `:` | 🙂 😊 😀 |
+| ← | `l` | left | `<` | ⬅ |
+| → | `t` | right | `>` | ➡ |
+
+**You never type the letters.** Paste the symbol into the Flap Set editor, or use the palette
+of symbols and colours beside the field, and the gateway stores the letter for you. Send `♥` to
+a module through the API, MQTT or the dashboard and it reaches the heart flap; ask the gateway
+what a module is showing and it answers `♥`.
+
+**A typed letter is still a letter.** `h` goes out as `H`, exactly as before — every client
+that sends lowercase text depends on that. Only `♥` (or one of the shapes in the last column)
+means the heart.
+
+**A symbol exists only where it is printed.** Each character is resolved against the reel of the
+module it lands on, so on a wall where one module carries the heart and the rest do not, `A♥B`
+puts the heart on that module and the stand-in (`*`) on any other — one glyph per module either
+way, so nothing shifts. A reel with neither the symbol nor its stand-in shows a blank.
+
+**Which modules carry what:** `GET /api/capabilities` reports the symbols in `charset.union`
+(some reel has it) and `charset.common` (every reel has it), names them in `pictographs`, and
+gives the wire byte for each in `spelling`. The raw frame paths still take the letter:
+`m5-h` shows the heart on module 5.
+
+Needs **gateway 4.1 or later** — an older gateway stores the letters but reports them as
+lowercase letters. Module firmware needs no change at all: a v31+ module stores and reports
+whatever bytes its flap set holds.
+
 ## The 64-flap budget
 
 A reel holds at most **64** flaps, so a character set is a zero-sum choice. The fixed
@@ -52,7 +91,10 @@ costs:
 | **Subtotal** | **44** |
 | **Left for punctuation + accents + currency** | **20** |
 
-So every accented letter you print costs you a punctuation mark or a colour flap.
+So every accented letter you print costs you a punctuation mark or a colour flap — and so does
+every [symbol flap](#symbol-flaps-gateway-v41): a heart and two arrows are three of those
+twenty slots, which is why the gateway falls back to a stand-in on the reels that spent them
+elsewhere.
 Thirteen French accents (`ÀÂÇÈÉÊËÎÏÔÙÛÜ`) eat most of the budget on their own.
 
 ## The default (English) set
@@ -122,7 +164,7 @@ nearest thing it can:
 | `Åre` | `Å` | `ARE` — the accent goes, the word survives |
 | `Dinner — 7pm` | em dash | `DINNER - 7PM` |
 | `15:30` | colon (the `fr-FR` reel has none) | `15.30` |
-| `♥` | pictograph flaps | a space, deliberately |
+| `♥` | the heart flap | `*` — the gateway's stand-in; a blank if the reel has no `*` either. A reel printed **with** ♥ shows it ([symbol flaps](#symbol-flaps-gateway-v41)) |
 | `Straße` | `ß` | `STRASSE` — **two** flaps, the documented German fallback |
 
 **ß is the interesting one.** A reel that carries it carries only the *lowercase* form — there

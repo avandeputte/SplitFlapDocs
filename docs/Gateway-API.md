@@ -257,7 +257,9 @@ reports set arithmetic, not a single alphabet:
 | `sets` | Each **distinct** reel once: `flaps`, `source` (`reported`/`assumed`/`builtin`), the reel `chars` **verbatim in flap-index order**, and the ids that carry it as a compressed list (`"0-44,50"`) |
 | `colors` | The colour flaps the wall actually has, **by name** (`["red","orange",…]`) |
 | `maxFlaps` | Flaps a module can carry — 64 real, 237 drawn |
-| `features` | Named capability flags to check instead of sniffing endpoints. The walls differ: a SplitFlap Gateway advertises e.g. `["colors","index","batch","quiet","maintenance","ha","ota","flapconfig"]`; a **Matrix Gateway** advertises `["cells","colors","index","lowercase","pictographs","quiet","ota","canvas","effects","ticker","brightness","events","effectDefs"]` `timer`/`alarms` (3.14), plus `audio`/`sound`/`environment`/`sd`/`claps`/`taps` when the mic, speaker, sensor, card or IMU is present — and no `maintenance`/`flapconfig`/`ha`. `` — note `canvas`/`effects`/`ticker`, and no `maintenance`/`flapconfig` |
+| `pictographs` | *(4.1)* The [symbol flaps](Flaps-and-Character-Sets.md#symbol-flaps-gateway-v41) some reel carries, by name — `["heart","up","down"]` |
+| `spelling` | *(4.1)* The wire byte for each character whose byte differs from the character: the six symbols, plus `"` → `q` where the reels borrow it |
+| `features` | Named capability flags to check instead of sniffing endpoints. The walls differ: a SplitFlap Gateway advertises e.g. `["colors","index","batch","quiet","maintenance","ha","ota","flapconfig","symbols"]`; a **Matrix Gateway** advertises `["cells","colors","index","lowercase","pictographs","quiet","ota","canvas","effects","ticker","brightness","events","effectDefs"]` `timer`/`alarms` (3.14), plus `audio`/`sound`/`environment`/`sd`/`claps`/`taps` when the mic, speaker, sensor, card or IMU is present — and no `maintenance`/`flapconfig`/`ha`. `` — note `canvas`/`effects`/`ticker`, and no `maintenance`/`flapconfig` |
 | `surface` | **What the wall is drawn on** (v3.17, drawn gateways only): `{"kind": "led-matrix" \| "lcd", "w", "h", "colorBits", "refreshHz"}` — a chunky LED matrix and a 10.1″ LCD invite different client rendering (art density, fonts, what "pixels" even look like), so the surface is stated directly, never inferred from the product name. `colorBits` is total bits per pixel (a depth-4 matrix = 12, the LCD\'s RGB565 = 16). The physical SplitFlap Gateway omits the key — no pixels to describe |
 | `motion` | **How the wall moves** (SplitFlap Gateway 3.10+; every Matrix Gateway): `{"kind": "drawn" \| "mechanical", "settleMs": …}`. `drawn` — a cell is a repaint, interruptible, nothing queues, so sub-second updates are honest; `mechanical` — motion must physically complete, and `settleMs` (~4000: a full revolution) is a real constraint. On the drawn wall `settleMs` is the worst-case flip *animation* (`flapMs × flapMax`, live-configurable) — cosmetic pacing, advisory. Stated directly so a client never infers the wall's nature from which endpoints exist. |
 
@@ -272,11 +274,34 @@ it likes, and only `common` says so. Reporting each distinct reel once (rather t
 per module) is what keeps the response small: a uniform wall is a few hundred bytes however
 large it is.
 
-**Two translations** are applied to the character sets, matching exactly what the gateway
+**Three translations** are applied to the character sets, matching exactly what the gateway
 does when it resolves a frame: the seven colour flaps `r o y g b p w` are kept *out* of the
-sets and reported by name under `colors`, and `q` — which the classic reel borrows for the
-double-quote flap — is reported as `"`. A client that read those as letters would believe a
-classic reel can show a lowercase `w`.
+sets and reported by name under `colors`; `q` — which the classic reel borrows for the
+double-quote flap — is reported as `"`; and the six **symbol flaps** (gateway 4.1), carried on
+the wire as `h u d s l t`, are reported as the symbols themselves, `♥ ↑ ↓ ☺ ← →`. A client that
+read any of those as letters would believe a classic reel can show a lowercase `w`.
+
+Two fields go with that third one, both new in 4.1:
+
+| Field | What it says |
+|---|---|
+| `pictographs` | The symbol flaps **some** reel carries, by name, in table order: `["heart","up","down"]`. The counterpart of `colors`, and a union for the same reason — "is there a heart anywhere on this wall". Empty on a wall printed with none |
+| `spelling` | For every character whose byte on the **wire** differs from the character itself, the byte to send on the raw frame paths (`POST /api/rs485/send`, MQTT `<prefix>/send`): the six symbols always, plus `"` → `q` when the wall's known reels borrow that byte and none prints `"` itself. When reels disagree the `"` entry is left out — there is no single answer for the wall |
+
+The `symbols` **feature token** means all three are present. It is deliberately *not*
+`pictographs`: on a Matrix Gateway that token means all fourteen pictographs, and a client
+reads it that way. `sets[].chars` is untouched by any of this — a reel is reported exactly as
+the module stores it, symbol letters and colour codes included, because flap-**index**
+addressing works against those bytes.
+
+Symbols are resolved **per module** on the way out: `{"ch":"♥"}` or a `♥` in
+`POST /api/flap/text` reaches the heart flap on a reel that carries one, and on a reel that
+does not it becomes that reel's stand-in (`*` for the heart, `:` for the smiley, `V` for the
+down arrow) or a blank — one glyph per module either way, so text never shifts.
+`/api/display/cells` is the exception, and deliberately: its contract is lenient, not
+approximate, so a cell whose module is **known** to lack the symbol is **skipped** and counted
+in `skipped`. Going the other way, `/api/display/state`, `/api/flap/modules` and the MQTT
+display string report what the flap *shows* — `♥`, and `"` for the double-quote flap.
 
 ## The companion contract
 

@@ -163,6 +163,15 @@ The default 64-flap set is ` ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$&()-+=;q:%'
 (position 0 is always blank); both the count and the set are configurable per module with
 `N` below — see [Flaps-and-Character-Sets](Flaps-and-Character-Sets.md).
 
+**Three lowercase runs in a reel are protocol, not letters.** `r o y g b p w` are the seven
+**colour** flaps; `q` is the **double-quote** flap, a byte the classic char map borrowed
+because that reel has no lowercase; and `h u d s l t` are the six **symbol** flaps — ♥ ↑ ↓ ☺ ←
+→ — which have no Windows-1252 byte of their own and so travel as reserved letters too. A reel
+stores and reports these bytes verbatim, and `m<ID>-h` shows the heart on a reel printed with
+one. What a *client* sees is translated at the gateway's edges from **gateway v4.1**
+(`/api/capabilities` reports the symbols, never the letters): see
+[Symbol flaps](Flaps-and-Character-Sets.md#symbol-flaps-gateway-v41).
+
 ### Calibration commands
 
 | Cmd | Syntax | Action | Broadcast | Reply |
