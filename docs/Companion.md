@@ -112,6 +112,12 @@ uppercase, just as a split-flap looks. On a Matrix Gateway you get the lowercase
 [pictographs](Flaps-and-Character-Sets.md#the-extra-flaps-on-a-matrix-gateway) the emulated reel
 carries.
 
+A physical reel can also carry a few **symbol flaps** — `♥ ↑ ↓ ☺ ← →` — printed in place of
+punctuation. With a current gateway the companion learns which modules have them and shows the
+symbol where it can (a heart typed in Compose, or sent from Home Assistant, lands as a heart);
+a module whose reel lacks it falls back to a stand-in (`♥ → *`). Compose and the playlist message
+editor offer a palette of the symbols the wall can actually show.
+
 Prefer it to shout anyway? **Always uppercase** in the global settings, per display.
 
 ## The gateway, in one place

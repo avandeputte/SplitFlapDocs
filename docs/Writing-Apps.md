@@ -310,12 +310,13 @@ global **Language**.
 ### Optional: what the wall can show (`caps`)
 
 Some walls are drawn rather than mechanical (a **Matrix Gateway**), and those carry
-fourteen pictographs a real reel has no flap for. Declare `caps` and the runtime tells
-you what you are driving:
+fourteen pictographs a real reel has no flap for. A **physical** reel can also carry six of
+them as real flaps — `♥ ↑ ↓ ☺ ← →` — when they're printed on it. Declare `caps` and the
+runtime tells you what you are driving:
 
 ```python
 def fetch(settings, format_lines, get_rows, get_cols, i18n=None, caps=None):
-    high = "↑" if (caps and caps.pictographs) else "HIGH"
+    high = "↑" if (caps and caps.can_show("↑")) else "HIGH"
     return [format_lines(f"{high} 9:28AM")]
 ```
 
@@ -325,7 +326,7 @@ on boot and on every resync, and this is its answer:
 | field | what it tells you |
 |---|---|
 | `lowercase` | it has lowercase flaps |
-| `pictographs` | it has the fourteen extra flaps |
+| `pictographs` | it has **all fourteen** extra flaps (a drawn wall). A physical reel may carry only some symbols — ask `can_show("♥")`, not this |
 | `named_colors` | colors are named, not spelled with `r/o/y/g/b/p/w` |
 | `instant` | **are sub-second updates honest here?** `True` on a drawn wall (a cell is a repaint); `False` where mechanical flaps must physically finish a move. Gate any ticking display — a seconds field, a fast bar — on this. Use `getattr(caps, 'instant', False)` so the app still runs on stock splitflap-os. |
 | `can_show(ch)` | **can every module on this wall show this exact character?** |
@@ -361,9 +362,12 @@ has, and only some of those still mean anything:
 
 | pictograph | on a plain reel | verdict |
 |---|---|---|
-| `← ↑ → ↓` | `< ^ > v` | **safe with no check** — still reads |
+| `← ↑ → ↓` | `< ^ > V` | **safe with no check** — still reads |
 | `■` `⌂` `☺` | `#` `^` `:` | usable |
-| `♥ ♦ ♣ ♠ ♪ ● ☀` | `*` | **meaning is lost** — check `caps.pictographs` |
+| `♥ ♦ ♣ ♠ ♪ ● ☀` | `*` | **meaning is lost** — ask `caps.can_show("♥")` |
+
+A physical reel that actually carries `♥ ↑ ↓ ☺ ← →` shows them for real (the gateway sends the
+right flap); `can_show` is how you find out, per wall.
 
 The seven **colour flaps** are different: every wall has had them from the start, so a
 colour tile (🟥🟩🟦🟨🟧🟪⬜) is always safe. But a colour is invisible when the user turns

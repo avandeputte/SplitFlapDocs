@@ -58,12 +58,12 @@ A fresh gateway knows no WiFi, so it **raises its own access point** to get you 
 2. Open **http://192.168.4.1** → **Settings → WiFi** → enter your SSID and password →
    **Save WiFi**. It reboots onto your LAN and the setup AP disappears.
 3. Reconnect your phone/laptop to your own WiFi and open
-   **http://splitflap-gw-xxxxxx.local** — the exact name is printed in the boot log and
+   **http://splitflap.local** — the name is a setting (Settings ▸ Network Name), printed in the boot log and
    matches the host in your router's device list.
 
 > **`.local` not loading?** mDNS doesn't work on every network (different VLAN, guest/IoT
 > SSID, blocked multicast, Windows, VMs, containers). Find the gateway's **IP address** in
-> your router's DHCP/attached-devices list — look for the host **`splitflap-gw-xxxxxx`** — and use
+> your router's DHCP/attached-devices list — look for the host **`splitflap`** — and use
 > `http://<that-ip>` instead. Give it a **DHCP reservation** while you're there.
 > → **[Finding it on your network](SplitFlap-Gateway.md#finding-it-on-your-network)**
 

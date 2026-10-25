@@ -38,7 +38,7 @@ It then joins your LAN and the AP disappears. →
 **The gateway's `.local` address doesn't load.**
 mDNS is best-effort — it commonly fails across VLANs or guest/IoT SSIDs, on routers that block
 multicast, on Windows, and from VMs and containers. **Use the IP instead:** find it in your
-router's DHCP/attached-devices list (the host is named `splitflap-gw-xxxxxx`), or read it off the
+router's DHCP/attached-devices list (the host is named `splitflap` unless you renamed it), or read it off the
 gateway's Status tab / USB serial console. Give it a DHCP reservation and use
 `http://<that-ip>` everywhere — including `GATEWAY_URL`. →
 [Finding it on your network](SplitFlap-Gateway.md#finding-it-on-your-network)

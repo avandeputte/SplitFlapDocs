@@ -22,7 +22,9 @@ that's [Vestaboard API](Vestaboard-API.md), not this page.)*
 ## Orientation
 
 - **Base URL:** `http://<gateway-ip>` — or `http://192.168.4.1` while on the setup AP. The
-  Both gateways advertise mDNS names of the form **`splitflap-gw-<6 hex digits>.local`** —
+  The SplitFlap Gateway advertises **`<name>.local`**, `splitflap` unless renamed in its
+  Settings tab (gateway 4.2; earlier firmware used `splitflap-gw-<6 hex digits>`), and the
+  Matrix Gateway still uses the hex form —
   the board's own id (SplitFlap Gateway since firmware 3.11; before that, plain
   `splitflap-gw`). The Matrix Gateway's hostname is also configurable. mDNS is
   best-effort — see [finding it on your network](SplitFlap-Gateway.md#finding-it-on-your-network).

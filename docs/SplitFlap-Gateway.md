@@ -7,8 +7,8 @@ has no notion of "a weather app" or "a playlist"; that's the [Companion's](Compa
 
 > **Repo:** [github.com/avandeputte/SplitFlapGateway](https://github.com/avandeputte/SplitFlapGateway)
 > · board: Waveshare **ESP32-S3-RS485-CAN** (RS-485 transceiver on board) · reach it at
-> **http://splitflap-gw-xxxxxx.local** (six hex digits unique to the board — printed at
-> boot) — or by IP, [see below](#finding-it-on-your-network)
+> **http://splitflap.local** (the name is a setting — Settings ▸ Network Name — and it is
+> printed at boot) — or by IP, [see below](#finding-it-on-your-network)
 
 ![The gateway's dashboard — the Modules tab](gateway-modules.png)
 
@@ -49,11 +49,18 @@ access point** — on first boot, and again any time it later loses your WiFi.
 ### Finding it on your network
 
 Once it's on your LAN, the gateway advertises itself over **mDNS** as
-**http://splitflap-gw-xxxxxx.local**, where  is six hex digits unique to this
-board — the name is printed in the boot log, and it's the same name your router's device
-list shows. (Firmware before 3.11 used plain `splitflap-gw`, which collides the moment a
-second gateway joins the LAN.) That's the easy address — but mDNS is a *best-effort*
-convenience, not a guarantee. It commonly doesn't resolve when:
+**http://splitflap.local** — the name is printed in the boot log, and it's the same name your
+router's device list shows.
+
+**The name is a setting** *(gateway 4.2)*: **Settings ▸ Network Name** takes lowercase letters,
+digits and hyphens, applies at once without a reboot, and is also the name `espota` and the
+Arduino IDE discover. **Two gateways on one network must not share it** — mDNS has no way to
+tell them apart, so rename the second one. (Firmware 3.11 to 4.1 derived a unique name per
+board, `splitflap-gw-<6 hex digits>.local`; a board updated to 4.2 answers to `splitflap.local`
+instead, so anything pinned to the old name needs the new one or the IP.)
+
+That's the easy address — but mDNS is a *best-effort* convenience, not a guarantee. It commonly
+doesn't resolve when:
 
 - your client is on a **different VLAN / subnet** from the gateway (mDNS doesn't route), or
   the network has an isolated **IoT/guest SSID**;
@@ -68,12 +75,11 @@ convenience, not a guarantee. It commonly doesn't resolve when:
 - **From the gateway itself** — while still on the setup AP, the **Status** tab shows the IP
   it got. Or watch the USB serial console at boot (115200 baud); it prints the IP.
 - **From your router** — open its admin page and look at the DHCP client / "attached
-  devices" list for a host named **`splitflap-gw-xxxxxx`**. This is the most reliable route, and
-  while you're there it's worth giving the gateway a **DHCP reservation** so the address
-  never changes.
-- **By scanning** — `dns-sd -B _http._tcp` (macOS) lists every `splitflap-gw-*` on the
-  network; or `arp -a`, or `nmap -sn 192.168.1.0/24`
-  on your subnet.
+  devices" list for a host named **`splitflap`** (or whatever you renamed it to). This is the
+  most reliable route, and while you're there it's worth giving the gateway a **DHCP
+  reservation** so the address never changes.
+- **By scanning** — `dns-sd -B _http._tcp` (macOS) lists every gateway on the network; or
+  `arp -a`, or `nmap -sn 192.168.1.0/24` on your subnet.
 
 Then use `http://<that-ip>` everywhere this guide shows a `.local` gateway address —
 including the companion's `GATEWAY_URL` / `gateway_url`. A reserved IP is the setup least
@@ -206,7 +212,8 @@ image and travels a different path: [over the bus](Module-Firmware-Updates.md).
 ### From the command line (espota)
 
 An alternative to the browser upload that needs no page open. The gateway advertises over
-mDNS as `splitflap-gw-<6 hex digits>` (printed at boot; `dns-sd -B _arduino._tcp` lists it):
+mDNS under its network name, `splitflap` by default (printed at boot; `dns-sd -B _arduino._tcp`
+lists it):
 
 ```bash
 # PlatformIO: the esp32s3_ota environment is preconfigured for it
@@ -216,14 +223,14 @@ pio run -e esp32s3_ota -t upload --upload-port 192.168.1.105
 
 ```bash
 # from .pio/build/esp32s3_devmodule/
-python3 -m espota -i splitflap-gw.local -f firmware.bin
+python3 -m espota -i splitflap.local -f firmware.bin
 
 # or by IP, with an OTA password set:
 python3 -m espota -i 192.168.1.105 -a yourpassword -f firmware.bin
 ```
 
 > PlatformIO can also push OTA directly via its **Upload** action — set
-> `upload_protocol = espota` and `upload_port = splitflap-gw.local` in `platformio.ini`
+> `upload_protocol = espota` and `upload_port = splitflap.local` in `platformio.ini`
 > (see [SETUP.md ▸ OTA](https://github.com/avandeputte/SplitFlapGateway/blob/main/SETUP.md)).
 
 ### If the web update fails: recovery without developer tools
@@ -253,7 +260,7 @@ Linux) and one file from Espressif:
    <https://raw.githubusercontent.com/espressif/arduino-esp32/master/tools/espota.py>
    (right-click → *Save as…*) into the same folder as the downloaded
    `SplitFlapGateway-<version>.bin`.
-2. Find the gateway's IP address on its **Status** tab (or use `splitflap-gw-xxxxxx.local`,
+2. Find the gateway's IP address on its **Status** tab (or use `splitflap.local`,
    the name printed on the Status tab's hostname line).
 3. In a terminal (Windows: *Command Prompt* or *PowerShell*) in that folder:
 

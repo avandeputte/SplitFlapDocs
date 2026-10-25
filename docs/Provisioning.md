@@ -55,7 +55,7 @@ terminal tool. Pick whichever is in front of you.
 ![The Provision tab: two modules advertising their serials, ready to be identified and assigned](gateway-provision.png)
 
 The point-and-click way. Open the [SplitFlap Gateway](SplitFlap-Gateway.md)'s web UI
-(its `splitflap-gw-xxxxxx.local` address, or the IP) and go to the
+(its `splitflap.local` address, or the IP) and go to the
 **[Provision tab](SplitFlap-Gateway.md#the-web-ui-tab-by-tab)**.
 
 ### 1. Discover
