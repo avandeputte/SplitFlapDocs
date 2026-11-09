@@ -95,8 +95,11 @@ reads it from here, so you set the grid **once**, on the gateway.
 
 ![The Display tab — the live wall, and boxes to send text or a single character](gateway-display.png)
 
-- **Modules** — a grid of every known module: ID, serial, the character it's showing, and
-  firmware version. The list is *sticky* — it survives reboots and only drops a module after
+- **Modules** — a grid of every known module: ID, serial, the character it's showing, its
+  firmware version and, from module firmware v36, its
+  [driver board](Bus-Protocol.md#two-driver-boards-module-firmware-v36) (*FW: v36 · Board v5*).
+  A module that does not report one is a v4 — the board only became a thing to report when the
+  second one existed. The list is *sticky* — it survives reboots and only drops a module after
   6 hours unseen. Each card has **⌂ Home**, **ℹ Info** (live query + the module's stored home
   offset, steps/rev, flap map — editable on newer module firmware), and a **🗑** menu (erase
   EEPROM / factory reset / de-provision). **↻ Identify All** rediscovers the bus. The tab

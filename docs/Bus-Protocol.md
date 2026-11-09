@@ -163,6 +163,29 @@ The default 64-flap set is ` ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$&()-+=;q:%'
 (position 0 is always blank); both the count and the set are configurable per module with
 `N` below — see [Flaps-and-Character-Sets](Flaps-and-Character-Sets.md).
 
+### Two driver boards *(module firmware v36+)*
+
+There are two driver boards, and the only difference is where the RS-485 transceiver is wired:
+
+| Board | Transceiver | On the bus |
+|---|---|---|
+| **v4** | `PA5` TX, `PA7` RX, `PA6` DE — not USART pins | bit-banged (SoftwareSerial) |
+| **v5** | `PA1` TX, `PA2` RX, `PA4` DE — USART0's alternate pins | the hardware USART, which drives DE itself |
+
+A module knows which it is from a strap on `PC0` (grounded on v5), and **an image runs only on
+its own board**: each release carries one firmware per board, and a module given the wrong one
+leaves the bus alone and waits in its bootloader for a right one — recoverable over the bus,
+but it is off the wall until then.
+
+The bus protocol is identical on both. Two replies differ:
+
+- **`v` appends the board** — `m<ID>v:<version>:<moduleId>:<serialNumber>:<board>`. Firmware
+  older than v36 ends at the serial number, and every such module is a v4: the v5 board's first
+  firmware is the one that added the field.
+- **A bootloader status frame is one byte longer on v5** — the v5 bootloader is version 2 and
+  appends its board after the page bitmap, so the frame is 42 bytes rather than 41
+  ([updating over the bus](Module-Firmware-Updates.md)).
+
 **Three lowercase runs in a reel are protocol, not letters.** `r o y g b p w` are the seven
 **colour** flaps; `q` is the **double-quote** flap, a byte the classic char map borrowed
 because that reel has no lowercase; and `h u d s l t` are the six **symbol** flaps — ♥ ↑ ↓ ☺ ←
@@ -215,7 +238,7 @@ defaults (64 / the built-in set).
 
 | Cmd | Syntax | Action | Broadcast | Reply |
 |---|---|---|---|---|
-| `v` | `m<ID>v` / `m*v<lo>-<hi>` | Report firmware version, ID and serial number. | ✓ staggered, optional range | `m<ID>v:<version>:<moduleId>:<serialNumber>` |
+| `v` | `m<ID>v` / `m*v<lo>-<hi>` | Report firmware version, ID, serial number and driver board. | ✓ staggered, optional range | `m<ID>v:<version>:<moduleId>:<serialNumber>` — `:<board>` appended in v36 |
 | `d` | `m<ID>d` | Dump calibration: home offset, total steps, and only the *calibrated* map entries (≠ `0xFFFF`). A full dump can be ~600 bytes / ~0.6 s. | — | `m<ID>d:<homeOffset>:<totalSteps>:<idx>=<pos>,…` |
 | `A` | `m<ID>A` / `m*A<lo>-<hi>` | Everything from `v` **and** `d` in one message, plus the flap set (tail appended in v31). | ✓ staggered (700 ms slots — prefer ranged batches), optional range | `m<ID>A:<version>:<moduleId>:<serialNumber>:<homeOffset>:<totalSteps>:<autoHome>:<curIndex>:<idx>=<pos>,…:<flapCount>:<flapChars>` |
 | `F` | `m<ID>F` | Factory-reset EEPROM to firmware defaults (home offset 2832, total steps 4096, auto-home on, map cleared, default flap set) while **preserving the module ID and magic byte** — the module stays addressable, but needs recalibrating. | ✓ | — |

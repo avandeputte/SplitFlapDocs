@@ -16,9 +16,13 @@ through simply waits for the image to be sent again.
 - **Modules on firmware v35 or later.** Older ones have no bootloader. The gateway skips them
   and tells you, and they are not disturbed by the update traffic: their firmware only acts on
   lines beginning with `m` or `~`, and update frames begin with `#`.
-- **The image**: `firmware-update.bin` from a module firmware release. Exactly 15,360 bytes,
-  240 pages of 64. The gateway checks the image's own CRC before storing it, so a truncated
-  download cannot reach a wall.
+- **The image for the right board**: `firmware-update.bin` from a module firmware release.
+  Exactly 15,360 bytes, 240 pages of 64. The gateway checks the image's own CRC before storing
+  it, so a truncated download cannot reach a wall. From v36 a release carries **one image per
+  [driver board](Bus-Protocol.md#two-driver-boards-module-firmware-v36)**, the image says which
+  board it is for, and the gateway says so too — *"Firmware v36 for board v5 is uploaded"*. It
+  updates the modules that match and leaves the others alone, counting them in the status
+  (*"3 modules left out: another board"*), so a mixed wall takes two runs, one image each.
 
 Getting the bootloader onto a module in the first place takes **one last flash over UPDI**.
 That image reserves the first kilobyte of flash with the `BOOTEND` fuse, which has to match
