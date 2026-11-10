@@ -46,6 +46,13 @@ access point** — on first boot, and again any time it later loses your WiFi.
 > bands, it's usually fine — but if the gateway can't see your network, that's the first
 > thing to check.
 
+> **Several access points, one name.** On a mesh or a network with more than one access point,
+> the gateway joins the one it hears **best** *(gateway 4.4)*. Before 4.4 it joined whichever
+> answered first and stayed there, so the same gateway could be quick after one reboot and
+> sluggish after the next. It still does not roam while connected: if you move an access
+> point, restart the gateway. `GET /api/status` names the access point it joined (`bssid`)
+> and how well it hears it (`rssi`).
+
 ### Finding it on your network
 
 Once it's on your LAN, the gateway advertises itself over **mDNS** as
@@ -84,6 +91,23 @@ doesn't resolve when:
 Then use `http://<that-ip>` everywhere this guide shows a `.local` gateway address —
 including the companion's `GATEWAY_URL` / `gateway_url`. A reserved IP is the setup least
 likely to surprise you later.
+
+### If the dashboard feels slow
+
+Update to **4.4** first: it fixed the gateway's own share of the delay (the radio no longer
+sleeps between beacons, the status poll no longer re-reads the whole firmware image, the page
+is under a third of the size, and a tab you are not looking at stops polling). After that the
+gateway answers the dashboard's own polls in about 5 ms, and what you feel is the WiFi link —
+each request is two round trips of it.
+
+- **Check the signal.** `rssi` in `GET /api/status` should be better than about −65 dBm.
+- **Check the channel.** Several access points sharing one 2.4 GHz channel, yours or the
+  neighbours', make every round trip slower however strong the signal is. `ping` the gateway
+  from a wired machine: a steady few milliseconds is a clean channel, tens of milliseconds
+  with spikes into the hundreds is a crowded one.
+- **Ask the gateway.** [`GET /api/perf`](Gateway-API.md#when-the-dashboard-is-slow) shows time
+  per endpoint and per client, so you can tell a slow request, a client that polls too hard
+  and a slow link apart.
 
 ## 3. Set the grid
 
@@ -166,7 +190,8 @@ reads it from here, so you set the grid **once**, on the gateway.
   before you looked, the log says so in its own row rather than leaving a silent gap.
 - **Home Assistant discovery** — opt-in on the Settings tab (needs MQTT). Creates a gateway
   device with a Display text entity, Maintenance/Quiet switches, and a set of diagnostic
-  sensors. *(This is the gateway's own HA device — the companion adds more; see
+  sensors. *(Before 4.4 the Maintenance switch and eleven of the sensors never appeared:
+  their discovery messages were cut short. They arrive, and are retained, from 4.4.)* *(This is the gateway's own HA device — the companion adds more; see
   [Home Assistant](Home-Assistant.md).)*
 - **Module firmware over the bus** *(v4.0)* — from module firmware **v35** every module
   carries a bootloader, and the gateway can reflash a whole wall over the RS-485 wire it is

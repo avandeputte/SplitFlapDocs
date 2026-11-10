@@ -67,8 +67,13 @@ page; on a Matrix wall the Companion prefers the higher-level [`/api/display/cel
 which skips unchanged cells and reaches lowercase, accents and pictographs. `step_ms` (0–30) paces
 the cascade device-side so the wall animates instead of snapping over at once. Since gateway 3.4
 paced frames are *queued* and the call returns immediately: **`200` means accepted, not yet on the
-wire**, and the pacing queue holds 127 frames in flight (a longer cascade loses its stagger past
-that point; the frames still all arrive).
+wire**. The pacing queue holds a whole 512-frame batch *(gateway 4.4; 127 frames before, and a
+longer cascade lost its stagger past that point)*, and a batch that arrives while the previous one
+is still being paced out **queues behind it** instead of interleaving with it.
+
+**Request bodies are bounded** *(SplitFlap Gateway 4.4)*. A JSON body over 24 KB is refused with
+`413` before it is parsed; the largest legitimate one, a full 512-frame batch, is under 10 KB.
+Firmware, backups and the companion's settings blob are streamed and have their own limits.
 
 ### Modules
 
@@ -94,7 +99,11 @@ config, restore-by-serial, and the bus tests — `POST /api/flap/probe` with
 it read before it began *(v3.15)*, both described in
 [Module Diagnostics](Module-Diagnostics.md#when-a-module-answers-short-questions-but-not-long-ones).
 The Matrix Gateway omits all of it by design: its modules are drawn, so there is nothing to
-calibrate or provision. That tier is documented in the SplitFlapGateway README and
+calibrate or provision. While a probe or a soak is running, the reads that wait for one
+module's reply — `/api/flap/version`, `/api/flap/dump`, `/api/flap/all` and `/api/flap/stats` —
+answer **`409`** *(v4.4)*: the test is listening for replies too, and before 4.4 either could be
+handed the other's. Ask again when `/api/flap/probe/status` or `…/soak/status` says it has
+finished. That tier is documented in the SplitFlapGateway README and
 `openapi.yaml` (see [the footer](#canonical-sources)).
 
 #### The modules' own firmware, over the bus *(v4.0)*
@@ -164,7 +173,8 @@ A client that needs certainty consults `/api/capabilities` first.
 
 | Method | Path | Body | Reply | Gateway |
 |---|---|---|---|---|
-| `GET` | `/api/status` | — | Uptime, IP, NTP, heap, PSRAM and OTA-slot figures and why the board last rebooted *(v3.16: `psram`, `flash`, `reset`)*, and the quiet flag (SplitFlap Gateway also `maintenance` and `mqtt`). The Matrix Gateway adds a `panel` object — size, grid, font, and the **running bit `depth`** — and per-task stack watermarks (`stk`) | both |
+| `GET` | `/api/status` | — | Uptime, IP, NTP, heap, PSRAM and OTA-slot figures and why the board last rebooted *(v3.16: `psram`, `flash`, `reset`)*, and the quiet flag (SplitFlap Gateway also `maintenance` and `mqtt`, and *(v4.4)* the radio link: `rssi`, `channel`, the `bssid` of the access point it joined, and `ps` — 0 means the radio never sleeps). The Matrix Gateway adds a `panel` object — size, grid, font, and the **running bit `depth`** — and per-task stack watermarks (`stk`) | both |
+| `GET` | `/api/perf` | `?reset=1` to start a new window | *(v4.4)* What the web server has been asked for and what it cost, since boot or the last reset: `requests` and `handlerMs` in total, then per endpoint (`endpoints[]`: `uri`, `n`, `ms`, `max`) and per client address (`clients[]`: `ip`, `n`, `ms`); `silentClientMs`, the time a client held the connection without sending a request; `loopGapMs`, the longest pause in each task's loop; and `heap` / `minHeap` / `maxBlock`. `ms` is time inside the gateway, so it tells a slow request from a slow link — [see below](#when-the-dashboard-is-slow) | SplitFlap Gateway only |
 | `GET` | `/api/config` | — | Current configuration, passwords excluded; includes `product` + `version` | both |
 | `POST` | `/api/config/wifi` | `{"ssid":"…","pass":"…"}` | `{ok}` — reconnects | both |
 | `POST` | `/api/config/mqtt` | `{"host":"…","port":1883,"user":"…","pass":"…","prefix":"splitflap"}` | `{ok}` — reconnects | SplitFlap Gateway only (the Matrix Gateway has no MQTT) |
@@ -200,6 +210,30 @@ settings and status are never gated; `/api/status` carries the current hold as `
 MQTT only, so a companion driving the wall over REST could paint over a calibration in progress.
 **Quiet time** blanks the wall — every reel homes to its blank flap — and restores it
 when turned off; the schedule's `days` is a bitmask, bit 0 = Sunday. Both reset to off on reboot.
+
+#### When the dashboard is slow
+
+*(SplitFlap Gateway 4.4.)* The gateway serves **one connection at a time**, and every request is
+a new connection, so it costs two round trips of the WiFi link before the handler even runs. A
+slow dashboard is therefore one of three things, and from a browser they look the same:
+
+- **a slow handler** — `endpoints[].ms / n` in `/api/perf` is the average time inside the gateway.
+  On 4.4 the endpoints the dashboard polls take 3–6 ms; the ones that wait for a module to
+  answer (`/api/flap/all`, `/api/flap/dump`, the self-test) legitimately take seconds;
+- **a busy or stuck client** — `clients[]` shows who is asking and how often (a reverse proxy
+  shows as one address), and `silentClientMs` is time lost to a client that connected and said
+  nothing;
+- **the link** — if the handlers are fast and requests still take hundreds of milliseconds,
+  it is the radio. `/api/status` says which access point the gateway joined (`bssid`), how well
+  it hears it (`rssi`, in dBm: −50 is good, −75 is not) and on which `channel`. Ping the
+  gateway: tens of milliseconds with spikes is a crowded 2.4 GHz channel, and no firmware
+  setting changes that.
+
+```sh
+curl -s 'http://splitflap.local/api/perf?reset=1' > /dev/null   # start a window
+# ...use the dashboard for a minute...
+curl -s http://splitflap.local/api/perf
+```
 
 ### Files, display & system (Matrix Gateway)
 
